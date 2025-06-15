@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>hacking_the_helix_flake | NixOS Blog</title>
+<link rel="icon" href="favicon.svg" sizes="any" type="image/svg+xml" /><meta property="og:url" content="http://localhost:1313/posts/hacking_the_helix_flake/">
+  <meta property="og:site_name" content="NixOS Blog">
+  <meta property="og:title" content="hacking_the_helix_flake">
+  <meta property="og:description" content="Chapter 4.4 Understanding the Helix Flake and Modifying its Behavior Understanding the Helix flake.nix Top-Level Metadata Inputs Outputs Function Common Setup - Breaking Down helix/default.nix - Making Actual Changes - Another way to Modify Behavior Understanding the Helix Flake and Modifying its Behavior As we’ve seen from previous examples, the helix editor repository includes a few .nix files including a flake.nix. Their flake uses a lot of idiomatic Nix code and advanced features. First I will break down their flake.nix and default.nix to understand why they do certain things. And finally, we will change the build to “debug” mode demonstrating how easily you can modify the behavior of a package defined within a Nix flake without changing the original source code or the upstream flake directly.">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-05-30T19:23:32-04:00">
+    <meta property="article:modified_time" content="2025-05-30T19:23:32-04:00">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="hacking_the_helix_flake">
+  <meta name="twitter:description" content="Chapter 4.4 Understanding the Helix Flake and Modifying its Behavior Understanding the Helix flake.nix Top-Level Metadata Inputs Outputs Function Common Setup - Breaking Down helix/default.nix - Making Actual Changes - Another way to Modify Behavior Understanding the Helix Flake and Modifying its Behavior As we’ve seen from previous examples, the helix editor repository includes a few .nix files including a flake.nix. Their flake uses a lot of idiomatic Nix code and advanced features. First I will break down their flake.nix and default.nix to understand why they do certain things. And finally, we will change the build to “debug” mode demonstrating how easily you can modify the behavior of a package defined within a Nix flake without changing the original source code or the upstream flake directly.">
+
+    <link rel="stylesheet" href="/css/root.css">
+    <link rel="stylesheet" href="/css/bundle.css">
+
+      <script src="/js/bundle.js"></script><script defer src="/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js" integrity="sha256-ZFlLEl97eL30&#43;oMWlVkiu&#43;uxzWuu8/FmVL/KIDCfGPg="></script>
+<script defer src="/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js" integrity="sha256-HZgPhN8R8&#43;t8jF8X9UHUmgYRYI3xed10&#43;n8GIl61as4="></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+
+</head>
+<body class="notransition">
+  <div id="container">
+    <header id="main-header"><div role="navigation" aria-label="Main">
+  <div class="nav-left">
+    <a href="http://localhost:1313/" style="color: inherit;">NixOS Blog</a>
+  </div>
+  <div class="nav-right">
+    <div style="position:absolute;width:0px;height:0px;">
+      <div id="nav-dropdown-menu" class="hidden" href="#">
+    <div class="nav-item">
+      <a aria-current="true" class="ancestor" href="/posts/"
+      >Posts</a>
+    </div>
+</div>
+    </div>
+    <a id="nav-dropdown-button" href="#"><svg width="20px" height="20px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</a>
+    <div id="nav-menu">
+    <div class="nav-item">
+      <a aria-current="true" class="ancestor" href="/posts/"
+      >Posts</a>
+    </div>
+</div>
+    <a id="theme-switcher" href="#">
+<svg class="light-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 3V4M12 20V21M4 12H3M6.31412 6.31412L5.5 5.5M17.6859 6.31412L18.5 5.5M6.31412 17.69L5.5 18.5001M17.6859 17.69L18.5 18.5001M21 12H20M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
+<svg class="dark-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M3.32031 11.6835C3.32031 16.6541 7.34975 20.6835 12.3203 20.6835C16.1075 20.6835 19.3483 18.3443 20.6768 15.032C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834C12.3497 15.6834 8.32031 11.654 8.32031 6.68342C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996C5.65605 4.66028 3.32031 7.89912 3.32031 11.6835Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</a>
+  </div>
+</div>
+</header>
+    <div class="flex grow">
+      <div id="main-pane">
+        <main id="main-content"><div class="single-header">
+<ol class="breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
+    <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+      <a itemprop="item" href="http://localhost:1313/">
+        <span itemprop="name">Home</span>
+      </a>
+      <meta itemprop="position" content='1' />
+    </li>
+    <span>&nbsp»&nbsp</span>
+    <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+      <a itemprop="item" href="http://localhost:1313/posts/">
+        <span itemprop="name">Posts</span>
+      </a>
+      <meta itemprop="position" content='2' />
+    </li>
+    <span>&nbsp»&nbsp</span>
+</ol>
+<h1>hacking_the_helix_flake</h1><time class="dim" datetime="2025-05-30T19:23:32-04:00">May 30, 2025</time></div>
+  <section class="page-section"><ul>
+<li><a href="#chapter-44">Chapter 4.4</a></li>
+<li><a href="#understanding-the-helix-flake-and-modifying-its-behavior">Understanding the Helix Flake and Modifying its Behavior</a>
+<ul>
+<li><a href="#understanding-the-helix-flakenix">Understanding the Helix flake.nix</a></li>
+<li><a href="#top-level-metadata">Top-Level Metadata</a></li>
+<li><a href="#inputs">Inputs</a></li>
+<li><a href="#outputs-function">Outputs Function</a></li>
+<li><a href="#common-setup">Common Setup</a> - <a href="#breaking-down-helixdefaultnix">Breaking Down <code>helix/default.nix</code></a> - <a href="#making-actual-changes">Making Actual Changes</a> - <a href="#another-way-to-modify-behavior">Another way to Modify Behavior</a></li>
+</ul>
+</li>
+</ul>
+<figure><img src="/images/helix.png"
+    alt="helix logo" width="1000">
+</figure>
+
+<h1 id="understanding-the-helix-flake-and-modifying-its-behavior">Understanding the Helix Flake and Modifying its Behavior</h1>
+<p>As we&rsquo;ve seen from previous examples, the helix editor repository includes a few
+<code>.nix</code> files including a <code>flake.nix</code>. Their flake uses a lot of idiomatic Nix
+code and advanced features. First I will break down their <code>flake.nix</code> and
+<code>default.nix</code> to understand why they do certain things. And finally, we will
+change the build to &ldquo;debug&rdquo; mode demonstrating how easily you can modify the
+behavior of a package defined within a Nix flake without changing the original
+source code or the upstream flake directly.</p>
+<ol>
+<li>Let&rsquo;s clone the Helix repository:</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>git clone https://github.com/helix-editor/helix.git
+</span></span><span style="display:flex;"><span>cd helix
+</span></span></code></pre></div><ol start="2">
+<li>Enter the Development Shell:</li>
+</ol>
+<p>The Helix project&rsquo;s <code>flake.nix</code> includes a <code>devShells.default</code> output, specifically
+designed for development.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix develop
+</span></span></code></pre></div><ol start="3">
+<li>You&rsquo;re now in a fully configured development environment:</li>
+</ol>
+<ul>
+<li>When you run <code>nix develop</code>, Nix builds and drops you into a shell environment
+with all the dependencies specified in <code>devShells.default</code>. This means you
+don’t have to manually install or manage tools like Rust, Cargo, or Clang—it’s
+all handled declaratively through Nix.</li>
+</ul>
+<p>You can now build and run the project using its standard tooling:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build
+</span></span><span style="display:flex;"><span>cargo run
+</span></span></code></pre></div><ol start="4">
+<li>Making Changes and Testing Them</li>
+</ol>
+<p>Since you&rsquo;re in a reproducible environment, you can confidently hack on the
+project without worrying about your system setup. Try modifying some code in
+<code>helix</code> and rebuilding with Cargo. The Nix shell ensures consistency for every
+contributor or device you work on.</p>
+<ol start="5">
+<li>Run Just the Binary</li>
+</ol>
+<p>If you only want to run the compiled program without entering the shell, use
+the nix run command:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix run
+</span></span></code></pre></div><p>This builds and runs the default package defined by the flake. In the case of
+Helix, this launches the <code>hx</code> editor directly.</p>
+<ol start="6">
+<li>Build Without Running</li>
+</ol>
+<p>To just build the project and get the path to the output binary:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix build
+</span></span></code></pre></div><p>You’ll find the compiled binary under <code>./result/bin</code>.</p>
+<ol start="7">
+<li>Pinning and Reproducing</li>
+</ol>
+<p>Because the project uses a flake, you can ensure full reproducibility by
+pinning the inputs. For example, you can clone with &ndash;recurse-submodules
+and copy the flake.lock to ensure you&rsquo;re using the same dependency versions
+as upstream. This is great for debugging or sharing exact builds.</p>
+<p>✅ Recap:</p>
+<p>With flakes, projects like Helix provide everything you need for development
+and running in a single flake.nix. You can nix develop to get started hacking,
+nix run to quickly try it out, and nix build to produce binaries—all without
+installing or polluting your system.</p>
+<h2 id="understanding-the-helix-flakenix">Understanding the Helix flake.nix</h2>
+<p>The helix flake is full of idiomatic Nix code and displays some of the more
+advanced things a flake can provide:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  description <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;A post-modern text editor.&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  inputs <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    nixpkgs<span style="color:#f92672">.</span>url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style="display:flex;"><span>    rust-overlay <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:oxalica/rust-overlay&#34;</span>;
+</span></span><span style="display:flex;"><span>      inputs<span style="color:#f92672">.</span>nixpkgs<span style="color:#f92672">.</span>follows <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nixpkgs&#34;</span>;
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  outputs <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    nixpkgs<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    rust-overlay<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>  }: <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">inherit</span> (nixpkgs) lib;
+</span></span><span style="display:flex;"><span>    systems <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;x86_64-linux&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;aarch64-linux&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;x86_64-darwin&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;aarch64-darwin&#34;</span>
+</span></span><span style="display:flex;"><span>    ];
+</span></span><span style="display:flex;"><span>    eachSystem <span style="color:#f92672">=</span> lib<span style="color:#f92672">.</span>genAttrs systems;
+</span></span><span style="display:flex;"><span>    pkgsFor <span style="color:#f92672">=</span> eachSystem (system:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">import</span> nixpkgs {
+</span></span><span style="display:flex;"><span>        localSystem<span style="color:#f92672">.</span>system <span style="color:#f92672">=</span> system;
+</span></span><span style="display:flex;"><span>        overlays <span style="color:#f92672">=</span> [(<span style="color:#f92672">import</span> rust-overlay) self<span style="color:#f92672">.</span>overlays<span style="color:#f92672">.</span>helix];
+</span></span><span style="display:flex;"><span>      });
+</span></span><span style="display:flex;"><span>    gitRev <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>rev or self<span style="color:#f92672">.</span>dirtyRev or <span style="color:#66d9ef">null</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">in</span> {
+</span></span><span style="display:flex;"><span>    packages <span style="color:#f92672">=</span> eachSystem (system: {
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">inherit</span> (pkgsFor<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span>) helix;
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      The default Helix build. Uses the latest stable Rust toolchain, and unstable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      nixpkgs.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      The build inputs can be overridden with the following:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      packages.${system}.default.override { rustPlatform = newPlatform; };
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      Overriding a derivation attribute can be done as well:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      packages.${system}.default.overrideAttrs { buildType = &#34;debug&#34;; };
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      */</span>
+</span></span><span style="display:flex;"><span>      default <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix;
+</span></span><span style="display:flex;"><span>    });
+</span></span><span style="display:flex;"><span>    checks <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>      lib<span style="color:#f92672">.</span>mapAttrs (system: pkgs: <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Get Helix&#39;s MSRV toolchain to build with by default.</span>
+</span></span><span style="display:flex;"><span>        msrvToolchain <span style="color:#f92672">=</span> pkgs<span style="color:#f92672">.</span>pkgsBuildHost<span style="color:#f92672">.</span>rust-bin<span style="color:#f92672">.</span>fromRustupToolchainFile <span style="color:#e6db74">./rust-toolchain.toml</span>;
+</span></span><span style="display:flex;"><span>        msrvPlatform <span style="color:#f92672">=</span> pkgs<span style="color:#f92672">.</span>makeRustPlatform {
+</span></span><span style="display:flex;"><span>          cargo <span style="color:#f92672">=</span> msrvToolchain;
+</span></span><span style="display:flex;"><span>          rustc <span style="color:#f92672">=</span> msrvToolchain;
+</span></span><span style="display:flex;"><span>        };
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">in</span> {
+</span></span><span style="display:flex;"><span>        helix <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix<span style="color:#f92672">.</span>override {
+</span></span><span style="display:flex;"><span>          rustPlatform <span style="color:#f92672">=</span> msrvPlatform;
+</span></span><span style="display:flex;"><span>        };
+</span></span><span style="display:flex;"><span>      })
+</span></span><span style="display:flex;"><span>      pkgsFor;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Devshell behavior is preserved.</span>
+</span></span><span style="display:flex;"><span>    devShells <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>      lib<span style="color:#f92672">.</span>mapAttrs (system: pkgs: {
+</span></span><span style="display:flex;"><span>        default <span style="color:#f92672">=</span> <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>          commonRustFlagsEnv <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;-C link-arg=-fuse-ld=lld -C target-cpu=native --cfg tokio_unstable&#34;</span>;
+</span></span><span style="display:flex;"><span>          platformRustFlagsEnv <span style="color:#f92672">=</span> lib<span style="color:#f92672">.</span>optionalString pkgs<span style="color:#f92672">.</span>stdenv<span style="color:#f92672">.</span>isLinux <span style="color:#e6db74">&#34;-Clink-arg=-Wl,--no-rosegment&#34;</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">in</span>
+</span></span><span style="display:flex;"><span>          pkgs<span style="color:#f92672">.</span>mkShell {
+</span></span><span style="display:flex;"><span>            inputsFrom <span style="color:#f92672">=</span> [self<span style="color:#f92672">.</span>checks<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix];
+</span></span><span style="display:flex;"><span>            nativeBuildInputs <span style="color:#f92672">=</span> <span style="color:#66d9ef">with</span> pkgs;
+</span></span><span style="display:flex;"><span>              [
+</span></span><span style="display:flex;"><span>                lld
+</span></span><span style="display:flex;"><span>                cargo-flamegraph
+</span></span><span style="display:flex;"><span>                rust-bin<span style="color:#f92672">.</span>nightly<span style="color:#f92672">.</span>latest<span style="color:#f92672">.</span>rust-analyzer
+</span></span><span style="display:flex;"><span>              ]
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">++</span> (lib<span style="color:#f92672">.</span>optional (stdenv<span style="color:#f92672">.</span>isx86_64 <span style="color:#f92672">&amp;&amp;</span> stdenv<span style="color:#f92672">.</span>isLinux) cargo-tarpaulin)
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">++</span> (lib<span style="color:#f92672">.</span>optional stdenv<span style="color:#f92672">.</span>isLinux lldb)
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">++</span> (lib<span style="color:#f92672">.</span>optional stdenv<span style="color:#f92672">.</span>isDarwin darwin<span style="color:#f92672">.</span>apple_sdk<span style="color:#f92672">.</span>frameworks<span style="color:#f92672">.</span>CoreFoundation);
+</span></span><span style="display:flex;"><span>            shellHook <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              export RUST_BACKTRACE=&#34;1&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              export RUSTFLAGS=&#34;</span><span style="color:#ae81ff">&#39;&#39;$</span><span style="color:#e6db74">{RUSTFLAGS:-&#34;&#34;} </span><span style="color:#e6db74">${</span>commonRustFlagsEnv<span style="color:#e6db74">}</span><span style="color:#e6db74"> </span><span style="color:#e6db74">${</span>platformRustFlagsEnv<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            &#39;&#39;</span>;
+</span></span><span style="display:flex;"><span>          };
+</span></span><span style="display:flex;"><span>      })
+</span></span><span style="display:flex;"><span>      pkgsFor;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    overlays <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      helix <span style="color:#f92672">=</span> final: prev: {
+</span></span><span style="display:flex;"><span>        helix <span style="color:#f92672">=</span> final<span style="color:#f92672">.</span>callPackage <span style="color:#e6db74">./default.nix</span> {<span style="color:#66d9ef">inherit</span> gitRev;};
+</span></span><span style="display:flex;"><span>      };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      default <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>overlays<span style="color:#f92672">.</span>helix;
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>  nixConfig <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    extra-substituters <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;https://helix.cachix.org&#34;</span>];
+</span></span><span style="display:flex;"><span>    extra-trusted-public-keys <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs=&#34;</span>];
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="top-level-metadata">Top-Level Metadata</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  description <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;A post-modern text editor.&#34;</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><ul>
+<li>This sets a human-readable description for the flake.</li>
+</ul>
+<h2 id="inputs">Inputs</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>inputs <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>  nixpkgs<span style="color:#f92672">.</span>url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style="display:flex;"><span>  rust-overlay <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:oxalica/rust-overlay&#34;</span>;
+</span></span><span style="display:flex;"><span>    inputs<span style="color:#f92672">.</span>nixpkgs<span style="color:#f92672">.</span>follows <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nixpkgs&#34;</span>;
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><ul>
+<li>
+<p><code>nixpkgs</code>: Uses the <code>nixos-unstable</code> branch of the Nixpkgs repository.</p>
+</li>
+<li>
+<p><code>rust-overlay</code>: follows the same <code>nixpkgs</code>, ensuring compatibility between
+inputs.</p>
+</li>
+</ul>
+<h2 id="outputs-function">Outputs Function</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>outputs <span style="color:#f92672">=</span> { self<span style="color:#f92672">,</span> nixpkgs<span style="color:#f92672">,</span> rust-overlay<span style="color:#f92672">,</span> <span style="color:#f92672">...</span> }:
+</span></span></code></pre></div><ul>
+<li>This defines what this flake exports, including <code>packages</code>, <code>devShells</code>, etc.</li>
+</ul>
+<h2 id="common-setup">Common Setup</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">inherit</span> (nixpkgs) lib;
+</span></span><span style="display:flex;"><span>  systems <span style="color:#f92672">=</span> [ <span style="color:#f92672">...</span> ];
+</span></span><span style="display:flex;"><span>  eachSystem <span style="color:#f92672">=</span> lib<span style="color:#f92672">.</span>genAttrs systems;
+</span></span></code></pre></div><ul>
+<li>
+<p><code>systems</code>: A list of the supported systems</p>
+</li>
+<li>
+<p><code>eachSystem</code>: A Helper to map over all platforms.</p>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>  pkgsFor <span style="color:#f92672">=</span> eachSystem (system:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">import</span> nixpkgs {
+</span></span><span style="display:flex;"><span>      localSystem<span style="color:#f92672">.</span>system <span style="color:#f92672">=</span> system;
+</span></span><span style="display:flex;"><span>      overlays <span style="color:#f92672">=</span> [(<span style="color:#f92672">import</span> rust-overlay) self<span style="color:#f92672">.</span>overlays<span style="color:#f92672">.</span>helix];
+</span></span><span style="display:flex;"><span>    });
+</span></span></code></pre></div><ul>
+<li>This imports <code>nixpkgs</code> for each system and applies overlays</li>
+</ul>
+<p>📦 <code>packages</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>packages <span style="color:#f92672">=</span> eachSystem (system: {
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">inherit</span> (pkgsFor<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span>) helix;
+</span></span><span style="display:flex;"><span>  default <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix;
+</span></span><span style="display:flex;"><span>});
+</span></span></code></pre></div><ul>
+<li>
+<p>For each platform:</p>
+<ul>
+<li>
+<p>Includes a <code>helix</code> package (defined in <code>./default.nix</code>)</p>
+</li>
+<li>
+<p>Sets <code>default</code> to <code>helix</code> (used by <code>nix build</code>, <code>nix run</code>)</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Let&rsquo;s look at the helix <code>default.nix</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  lib<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  rustPlatform<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  callPackage<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  runCommand<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  installShellFiles<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  git<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  gitRev <span style="color:#f92672">?</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  grammarOverlays <span style="color:#f92672">?</span> []<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  includeGrammarIf <span style="color:#f92672">?</span> _: <span style="color:#66d9ef">true</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>}: <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>  fs <span style="color:#f92672">=</span> lib<span style="color:#f92672">.</span>fileset;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  src <span style="color:#f92672">=</span> fs<span style="color:#f92672">.</span>difference (fs<span style="color:#f92672">.</span>gitTracked <span style="color:#e6db74">./.</span>) (fs<span style="color:#f92672">.</span>unions [
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./.envrc</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./rustfmt.toml</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./screenshot.png</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./book</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./docs</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./runtime</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./flake.lock</span>
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: lib<span style="color:#f92672">.</span>strings<span style="color:#f92672">.</span>hasInfix <span style="color:#e6db74">&#34;.git&#34;</span> file<span style="color:#f92672">.</span>name) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: file<span style="color:#f92672">.</span>hasExt <span style="color:#e6db74">&#34;svg&#34;</span>) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: file<span style="color:#f92672">.</span>hasExt <span style="color:#e6db74">&#34;md&#34;</span>) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: file<span style="color:#f92672">.</span>hasExt <span style="color:#e6db74">&#34;nix&#34;</span>) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>  ]);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># Next we actually need to build the grammars and the runtime directory</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># that they reside in. It is built by calling the derivation in the</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># grammars.nix file, then taking the runtime directory in the git repo</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># and hooking symlinks up to it.</span>
+</span></span><span style="display:flex;"><span>  grammars <span style="color:#f92672">=</span> callPackage <span style="color:#e6db74">./grammars.nix</span> {<span style="color:#66d9ef">inherit</span> grammarOverlays includeGrammarIf;};
+</span></span><span style="display:flex;"><span>  runtimeDir <span style="color:#f92672">=</span> runCommand <span style="color:#e6db74">&#34;helix-runtime&#34;</span> {} <span style="color:#e6db74">&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    mkdir -p $out
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    ln -s </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./runtime</span><span style="color:#e6db74">}</span><span style="color:#e6db74">/* $out
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    rm -r $out/grammars
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    ln -s </span><span style="color:#e6db74">${</span>grammars<span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/grammars
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  &#39;&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">in</span>
+</span></span><span style="display:flex;"><span>  rustPlatform<span style="color:#f92672">.</span>buildRustPackage (self: {
+</span></span><span style="display:flex;"><span>    cargoLock <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      lockFile <span style="color:#f92672">=</span> <span style="color:#e6db74">./Cargo.lock</span>;
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e"># This is not allowed in nixpkgs but is very convenient here: it allows us to</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e"># avoid specifying `outputHashes` here for any git dependencies we might take</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e"># on temporarily.</span>
+</span></span><span style="display:flex;"><span>      allowBuiltinFetchGit <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    nativeBuildInputs <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>      installShellFiles
+</span></span><span style="display:flex;"><span>      git
+</span></span><span style="display:flex;"><span>    ];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    buildType <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;release&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#f92672">=</span> <span style="color:#66d9ef">with</span> builtins; (fromTOML (readFile <span style="color:#e6db74">./helix-term/Cargo.toml</span>))<span style="color:#f92672">.</span>package<span style="color:#f92672">.</span>name;
+</span></span><span style="display:flex;"><span>    src <span style="color:#f92672">=</span> fs<span style="color:#f92672">.</span>toSource {
+</span></span><span style="display:flex;"><span>      root <span style="color:#f92672">=</span> <span style="color:#e6db74">./.</span>;
+</span></span><span style="display:flex;"><span>      fileset <span style="color:#f92672">=</span> src;
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Helix attempts to reach out to the network and get the grammars. Nix doesn&#39;t allow this.</span>
+</span></span><span style="display:flex;"><span>    HELIX_DISABLE_AUTO_GRAMMAR_BUILD <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># So Helix knows what rev it is.</span>
+</span></span><span style="display:flex;"><span>    HELIX_NIX_BUILD_REV <span style="color:#f92672">=</span> gitRev;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    doCheck <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    strictDeps <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Sets the Helix runtime dir to the grammars</span>
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">.</span>HELIX_DEFAULT_RUNTIME <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>runtimeDir<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Get all the application stuff in the output directory.</span>
+</span></span><span style="display:flex;"><span>    postInstall <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      mkdir -p $out/lib
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      installShellCompletion </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./contrib/completion</span><span style="color:#e6db74">}</span><span style="color:#e6db74">/hx.{bash,fish,zsh}
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      cp </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./contrib/Helix.desktop</span><span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/share/applications/Helix.desktop
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      cp </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./logo.svg</span><span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/share/icons/hicolor/scalable/apps/helix.svg
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      cp </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./contrib/helix.png</span><span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/share/icons/hicolor/256x256/apps/helix.png
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    meta<span style="color:#f92672">.</span>mainProgram <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;hx&#34;</span>;
+</span></span><span style="display:flex;"><span>  })
+</span></span></code></pre></div><h3 id="breaking-down-helixdefaultnix">Breaking Down <code>helix/default.nix</code></h3>
+<p>This <code>default.nix</code> file is a Nix derivation that defines how to build the Helix
+editor itself. It&rsquo;s designed to be called by the main <code>flake.nix</code> as part of its
+<code>packages</code> output.</p>
+<p>Here&rsquo;s a breakdown of its components:</p>
+<ol>
+<li><strong>Function Arguments</strong>:</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  lib<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  rustPlatform<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  callPackage<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  runCommand<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  installShellFiles<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  git<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  gitRev <span style="color:#f92672">?</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  grammarOverlays <span style="color:#f92672">?</span> []<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  includeGrammarIf <span style="color:#f92672">?</span> _: <span style="color:#66d9ef">true</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>}:
+</span></span></code></pre></div><p><code>lib</code>: The Nixpkgs <code>lib</code> (library) functions, essential for common operations
+like <code>fileset</code> and <code>strings</code>.</p>
+<p><code>rustPlatform</code>: A helper function from Nixpkgs specifically for building Rust
+projects. It provides a <code>buildRustPackage</code> function, which simplifies the
+process significantly.</p>
+<p><code>callPackage</code>: A Nixpkgs function used to instantiate a Nix expression (like
+<code>grammars.nix</code>) with its dependencies automatically supplied from the current
+Nix environment.</p>
+<p><code>runCommand</code>: A Nixpkgs primitive that creates a derivation by running a shell
+command. It&rsquo;s used here to construct the <code>runtimeDir</code>.</p>
+<p><code>installShellFiles</code>: A utility from Nixpkgs for installing shell completion
+files.</p>
+<p><code>git</code>: The Git package, needed for determining the <code>gitRev</code>.</p>
+<p><code>gitRev ? null</code>: The Git revision of the Helix repository. It&rsquo;s an optional
+argument, defaulting to null. This is passed in from the main <code>flake.nix</code>.</p>
+<p><code>grammarOverlays ? []</code>: An optional list of overlays for grammars, allowing
+customization.</p>
+<p><code>includeGrammarIf ? _: true</code>: An optional function to control which grammars
+are included.</p>
+<ol start="2">
+<li><strong>Local Variables</strong> (<code>let ... in</code>)</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>  fs <span style="color:#f92672">=</span> lib<span style="color:#f92672">.</span>fileset;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  src <span style="color:#f92672">=</span> fs<span style="color:#f92672">.</span>difference (fs<span style="color:#f92672">.</span>gitTracked <span style="color:#e6db74">./.</span>) (fs<span style="color:#f92672">.</span>unions [
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./.envrc</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./rustfmt.toml</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./screenshot.png</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./book</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./docs</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./runtime</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./flake.lock</span>
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: lib<span style="color:#f92672">.</span>strings<span style="color:#f92672">.</span>hasInfix <span style="color:#e6db74">&#34;.git&#34;</span> file<span style="color:#f92672">.</span>name) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: file<span style="color:#f92672">.</span>hasExt <span style="color:#e6db74">&#34;svg&#34;</span>) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: file<span style="color:#f92672">.</span>hasExt <span style="color:#e6db74">&#34;md&#34;</span>) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>    (fs<span style="color:#f92672">.</span>fileFilter (file: file<span style="color:#f92672">.</span>hasExt <span style="color:#e6db74">&#34;nix&#34;</span>) <span style="color:#e6db74">./.</span>)
+</span></span><span style="display:flex;"><span>  ]);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  grammars <span style="color:#f92672">=</span> callPackage <span style="color:#e6db74">./grammars.nix</span> { <span style="color:#66d9ef">inherit</span> grammarOverlays includeGrammarIf; };
+</span></span><span style="display:flex;"><span>  runtimeDir <span style="color:#f92672">=</span> runCommand <span style="color:#e6db74">&#34;helix-runtime&#34;</span> {} <span style="color:#e6db74">&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    mkdir -p $out
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    ln -s </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./runtime</span><span style="color:#e6db74">}</span><span style="color:#e6db74">/* $out
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    rm -r $out/grammars
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    ln -s </span><span style="color:#e6db74">${</span>grammars<span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/grammars
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  &#39;&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">in</span>
+</span></span></code></pre></div><p><code>fs = lib.fileset;</code>: Aliases <code>lib.fileset</code> for convenient file set operations.</p>
+<p><code>src</code>: This is a crucial part. It defines the source files that will be used to
+build Helix by:</p>
+<ul>
+<li>
+<p>Taking all Git-tracked files in the current directory (<code>fs.gitTracked ./.</code>).</p>
+</li>
+<li>
+<p>Excluding configuration files (e.g., .envrc, flake.lock), documentation (.md), images (.svg), and Nix files (.nix) using fs.difference and fs.unions. This ensures a clean build input, reducing Nix store size and avoiding unnecessary rebuilds.</p>
+</li>
+<li>
+<p><code>grammars</code>: Builds syntax grammars by calling <code>grammars.nix</code>, passing <code>grammarOverlays</code>
+(for customizing grammar builds) and <code>includeGrammarIf</code> (a filter for selecting grammars).</p>
+</li>
+<li>
+<p><code>runtimeDir</code>: Creates a runtime directory for Helix by:</p>
+<ul>
+<li>
+<p>Symlinking the <code>runtime</code> directory from the source.</p>
+</li>
+<li>
+<p>Replacing the <code>grammars</code> subdirectory with a symlink to the <code>grammars</code>
+derivation, ensuring Helix uses Nix-managed grammars.</p>
+</li>
+</ul>
+</li>
+</ul>
+<ol start="3">
+<li><strong>The Build Derivation</strong> (<code>rustPlatform.buildRustPackage</code>)</li>
+</ol>
+<p>The core of this <code>default.nix</code> is the <code>rustPlatform.buildRustPackage</code> call, which
+is a specialized builder for Rust projects:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>in
+</span></span><span style="display:flex;"><span>  rustPlatform<span style="color:#f92672">.</span>buildRustPackage (self: {
+</span></span><span style="display:flex;"><span>    cargoLock <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      lockFile <span style="color:#f92672">=</span> <span style="color:#e6db74">./Cargo.lock</span>;
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e"># ... comments ...</span>
+</span></span><span style="display:flex;"><span>      allowBuiltinFetchGit <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>    };
+</span></span></code></pre></div><p><code>cargoLock</code>: Specifies how Cargo dependencies are handled.</p>
+<p><code>lockFile = ./Cargo.lock;</code> Points to the <code>Cargo.lock</code> file for reproducible builds.</p>
+<p><code>allowBuiltinFetchGit = true</code>: Allows Cargo to fetch Git dependencies directly
+from repositories specified in <code>Cargo.lock</code>. This is discouraged in Nixpkgs
+because it can break build reproducibility, but it’s used here for convenience
+during development, eliminating the need to manually specify <code>outputHashes</code> for
+Git dependencies.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>nativeBuildInputs <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>      installShellFiles
+</span></span><span style="display:flex;"><span>      git
+</span></span><span style="display:flex;"><span>    ];
+</span></span></code></pre></div><p><code>nativeBuildInputs</code>: Are tools needed during the build process but not necessarily
+at runtime.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>buildType <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;release&#34;</span>;
+</span></span></code></pre></div><p><code>buildType</code>: Specifies that Helix should be built in &ldquo;release&rdquo; mode (optimized).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>name <span style="color:#f92672">=</span> <span style="color:#66d9ef">with</span> builtins; (fromTOML (readFile <span style="color:#e6db74">./helix-term/Cargo.toml</span>))<span style="color:#f92672">.</span>package<span style="color:#f92672">.</span>name;
+</span></span><span style="display:flex;"><span>    src <span style="color:#f92672">=</span> fs<span style="color:#f92672">.</span>toSource {
+</span></span><span style="display:flex;"><span>      root <span style="color:#f92672">=</span> <span style="color:#e6db74">./.</span>;
+</span></span><span style="display:flex;"><span>      fileset <span style="color:#f92672">=</span> src;
+</span></span><span style="display:flex;"><span>    };
+</span></span></code></pre></div><p><code>name</code>: Dynamically sets the package name by reading it from the <code>Cargo.toml</code> file.</p>
+<p><code>src</code>: Uses the <code>src</code> file set defined earlier as the source for the build.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#75715e"># Helix attempts to reach out to the network and get the grammars. Nix doesn&#39;t allow this.</span>
+</span></span><span style="display:flex;"><span>    HELIX_DISABLE_AUTO_GRAMMAR_BUILD <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># So Helix knows what rev it is.</span>
+</span></span><span style="display:flex;"><span>    HELIX_NIX_BUILD_REV <span style="color:#f92672">=</span> gitRev;
+</span></span></code></pre></div><p><strong>Environment Variables</strong>: Sets environment variables that Helix uses.</p>
+<p><code>HELIX_DISABLE_AUTO_GRAMMAR_BUILD = &quot;1&quot;</code>: Prevents Helix from downloading
+grammars during the build, as Nix’s sandboxed environment disallows network
+access. Instead, grammars are provided via the <code>runtimeDir</code> derivation.</p>
+<p><code>HELIX_NIX_BUILD_REV = gitRev</code>: Embeds the specified Git revision (or <code>null</code> if
+unspecified) into the Helix binary, allowing Helix to display its version or
+commit hash.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span> doCheck <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    strictDeps <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span></code></pre></div><p><code>doCheck = false;</code>: Skips running tests during the build. This is common for
+faster builds, especially in CI/CD, but tests are often run in a separate
+<code>checks</code> output (as seen in the <code>flake.nix</code>).</p>
+<p><code>strictDeps = true;</code>: Ensures that all dependencies are explicitly declared.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>    <span style="color:#75715e"># Sets the Helix runtime dir to the grammars</span>
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">.</span>HELIX_DEFAULT_RUNTIME <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>runtimeDir<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>    <span style="color:#75715e"># Sets the Helix runtime dir to the grammars</span>
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">.</span>HELIX_DEFAULT_RUNTIME <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>runtimeDir<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>;
+</span></span></code></pre></div><p><code>env.HELIX_DEFAULT_RUNTIME</code>: Tells Helix where to find its runtime files
+(including the Nix-managed grammars).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Get all the application stuff in the output directory.</span>
+</span></span><span style="display:flex;"><span>    postInstall <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      mkdir -p $out/lib
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      installShellCompletion </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./contrib/completion</span><span style="color:#e6db74">}</span><span style="color:#e6db74">/hx.{bash,fish,zsh}
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      cp </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./contrib/Helix.desktop</span><span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/share/applications/Helix.desktop
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      cp </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./logo.svg</span><span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/share/icons/hicolor/scalable/apps/helix.svg
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      cp </span><span style="color:#e6db74">${</span><span style="color:#e6db74">./contrib/helix.png</span><span style="color:#e6db74">}</span><span style="color:#e6db74"> $out/share/icons/hicolor/256x256/apps/helix.png
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;&#39;</span>;
+</span></span></code></pre></div><p><code>postInstall</code>: A shell script that runs after the main build is complete. This
+is used for installing additional files that are part of the Helix distribution
+but not directly built by Cargo.</p>
+<p>Installs shell completion files (<code>hx.bash</code>, <code>hx.fish</code>, <code>hx.zsh</code>). This enables
+tab completion.</p>
+<p>Installs desktop entry files (<code>Helix.desktop</code>) and icons (<code>logo.svg</code>, <code>helix.png</code>)
+for desktop integration for GUI environments.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    meta<span style="color:#f92672">.</span>mainProgram <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;hx&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">})</span>
+</span></span></code></pre></div><p><code>meta.mainProgram</code>: Specifies the primary executable provided by this package,
+allowing <code>nix run</code> to automatically execute <code>hx</code>.</p>
+<p>A lot going on in this derivation!</p>
+<h3 id="making-actual-changes">Making Actual Changes</h3>
+<ol>
+<li>Locate the <code>packages</code> output section. It looks like this:</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>packages <span style="color:#f92672">=</span> eachSystem (system: {
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">inherit</span> (pkgsFor<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span>) helix;
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      The default Helix build. Uses the latest stable Rust toolchain, and unstable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      nixpkgs.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      The build inputs can be overridden with the following:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      packages.${system}.default.override { rustPlatform = newPlatform; };
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      Overriding a derivation attribute can be done as well:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      packages.${system}.default.overrideAttrs { buildType = &#34;debug&#34;; };
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">      */</span>
+</span></span><span style="display:flex;"><span>      default <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix;
+</span></span><span style="display:flex;"><span>    });
+</span></span></code></pre></div><ol start="2">
+<li>Modify the <code>default</code> package. The comments actually tell us exactly how to
+do this. We want to use <code>overrideAttrs</code> to change the <code>buildType</code></li>
+</ol>
+<p>Change this line:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>default <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix;
+</span></span></code></pre></div><p>To this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>default <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix<span style="color:#f92672">.</span>overrideAttrs { buildType <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;debug&#34;</span>; };
+</span></span></code></pre></div><ul>
+<li>This tells Nix to take the standard Helix package definition and override one
+of its internal attributes (<code>buildType</code>) to &ldquo;debug&rdquo; instead of &ldquo;release&rdquo;.</li>
+</ul>
+<ol start="3">
+<li>Build the &ldquo;Hacked&rdquo; Helix:</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix build
+</span></span></code></pre></div><ul>
+<li>Nix will now rebuild Helix, but this time, it will compile it in debug mode.
+You&rsquo;ll likely notice the build takes a bit longer, and the resulting binary
+will be larger due to the included debugging symbols.</li>
+</ul>
+<ol start="4">
+<li>Run the Debug Binary:</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./result/bin/hx
+</span></span></code></pre></div><ul>
+<li>You&rsquo;re now running your custom-built debug version of Helix! This is useful
+if you were, for example, attatching a debugger.</li>
+</ul>
+<p>This is a simple yet powerful &ldquo;hack&rdquo; that demonstrates how easily you can modify
+the behavior of a package defined within a Nix flake without changing the
+original source code or the upstream flake directly. You&rsquo;re simply telling Nix
+how you&rsquo;d like your version of the package to be built.</p>
+<h3 id="another-way-to-modify-behavior">Another way to Modify Behavior</h3>
+<p>Since we are already familiar with the structure and behavior of Helix’s
+<code>flake.nix</code>, we can leverage that understanding to create our own Nix flake.
+By analyzing how Helix organizes its <code>inputs</code>, <code>outputs</code>, and package definitions,
+we gain the confidence to modify and extend a flake’s functionality to suit our
+specific needs—whether that’s customizing builds, adding overlays, or
+integrating with home-manager.</p>
+<ol>
+<li>Create a <code>flake.nix</code> in your own directory (outside the helix repo):</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  description <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Customized Helix build with debug features&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  inputs <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    helix<span style="color:#f92672">.</span>url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:helix-editor/helix&#34;</span>;
+</span></span><span style="display:flex;"><span>    nixpkgs<span style="color:#f92672">.</span>url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style="display:flex;"><span>    rust-overlay <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:oxalica/rust-overlay&#34;</span>;
+</span></span><span style="display:flex;"><span>      inputs<span style="color:#f92672">.</span>nixpkgs<span style="color:#f92672">.</span>follows <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nixpkgs&#34;</span>;
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>  outputs <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    helix<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    nixpkgs<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    rust-overlay<span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>  }: <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>    system <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;x86_64-linux&#34;</span>;
+</span></span><span style="display:flex;"><span>    pkgs <span style="color:#f92672">=</span> <span style="color:#f92672">import</span> nixpkgs {
+</span></span><span style="display:flex;"><span>      system <span style="color:#f92672">=</span> system;
+</span></span><span style="display:flex;"><span>      overlays <span style="color:#f92672">=</span> [rust-overlay<span style="color:#f92672">.</span>overlay<span style="color:#f92672">.</span>overlays<span style="color:#f92672">.</span>default];
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">in</span> {
+</span></span><span style="display:flex;"><span>    packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>default <span style="color:#f92672">=</span> helix<span style="color:#f92672">.</span>packages<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>helix<span style="color:#f92672">.</span>overrideAttrs (old: {
+</span></span><span style="display:flex;"><span>      buildType <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;debug&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e"># Add additional cargo features</span>
+</span></span><span style="display:flex;"><span>      cargoBuildFlags <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>        (old<span style="color:#f92672">.</span>cargoBuildFlags or [])
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">++</span> [
+</span></span><span style="display:flex;"><span>          <span style="color:#e6db74">&#34;--features&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#e6db74">&#34;tokio-console&#34;</span>
+</span></span><span style="display:flex;"><span>        ];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e"># Inject custom RUSTFLAGS</span>
+</span></span><span style="display:flex;"><span>      RUSTFLAGS <span style="color:#f92672">=</span> (old<span style="color:#f92672">.</span>RUSTFLAGS or <span style="color:#e6db74">&#34;&#34;</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; -C debuginfo=2 -C opt-level=1&#34;</span>;
+</span></span><span style="display:flex;"><span>    });
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Check it:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix flake check
+</span></span><span style="display:flex;"><span>warning: creating lock file <span style="color:#e6db74">&#39;&#34;/home/jr/world/flake.lock&#34;&#39;</span>:
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;helix&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;github:helix-editor/helix/8961ae1dc66633ea6c9f761896cb0d885ae078ed?narHash=sha256-f14perPUk%2BH15GyGRbg0Akqhn3rxFnc6Ez5onqpzu6A%3D&#39;</span> <span style="color:#f92672">(</span>2025-05-29<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;helix/nixpkgs&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;github:nixos/nixpkgs/5135c59491985879812717f4c9fea69604e7f26f?narHash=sha256-Vr3Qi346M%2B8CjedtbyUevIGDZW8LcA1fTG0ugPY/Hic%3D&#39;</span> <span style="color:#f92672">(</span>2025-02-26<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;helix/rust-overlay&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;github:oxalica/rust-overlay/d342e8b5fd88421ff982f383c853f0fc78a847ab?narHash=sha256-3SdPQrZoa4odlScFDUHd4CUPQ/R1gtH4Mq9u8CBiK8M%3D&#39;</span> <span style="color:#f92672">(</span>2025-02-27<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;helix/rust-overlay/nixpkgs&#39;</span>:
+</span></span><span style="display:flex;"><span>    follows <span style="color:#e6db74">&#39;helix/nixpkgs&#39;</span>
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;nixpkgs&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;github:nixos/nixpkgs/96ec055edbe5ee227f28cdbc3f1ddf1df5965102?narHash=sha256-7doLyJBzCllvqX4gszYtmZUToxKvMUrg45EUWaUYmBg%3D&#39;</span> <span style="color:#f92672">(</span>2025-05-28<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;rust-overlay&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;github:oxalica/rust-overlay/405ef13a5b80a0a4d4fc87c83554423d80e5f929?narHash=sha256-k0nhPtkVDQkVJckRw6fGIeeDBktJf1BH0i8T48o7zkk%3D&#39;</span> <span style="color:#f92672">(</span>2025-05-30<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>• Added input <span style="color:#e6db74">&#39;rust-overlay/nixpkgs&#39;</span>:
+</span></span><span style="display:flex;"><span>    follows <span style="color:#e6db74">&#39;nixpkgs&#39;</span>
+</span></span></code></pre></div><ul>
+<li>The <code>nix flake check</code> command will generate a <code>flake.lock</code> file if one doesn&rsquo;t
+exist, and the warnings you see indicate that new inputs are being added and
+locked to specific versions for reproducibility. This is expected behavior for
+a new or modified flake.</li>
+</ul>
+<p>Inspect the outputs:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix flake show
+</span></span><span style="display:flex;"><span>path:/home/jr/world?lastModified<span style="color:#f92672">=</span>1748612128&amp;narHash<span style="color:#f92672">=</span>sha256-WEYtptarRrrm0Jb/0PJ/b5VPqLkCk5iEenjbKYU4Xm8%3D
+</span></span><span style="display:flex;"><span>└───packages
+</span></span><span style="display:flex;"><span>    └───x86_64-linux
+</span></span><span style="display:flex;"><span>        └───default: package <span style="color:#e6db74">&#39;helix-term&#39;</span>
+</span></span></code></pre></div><ul>
+<li>
+<p>The <code>└───packages</code> line indicates that our flake exposes a top-level <code>packages</code>
+attribute.</p>
+</li>
+<li>
+<p><code>└───x86_64-linux</code>: System architecture specificity</p>
+</li>
+<li>
+<p><code>└───default: package 'helix-term'</code> Signifies that within the <code>x86_64-linux</code>
+packages, there&rsquo;s a package named <code>default</code>. This is a special name that allows
+you to omit the package name when using commands like <code>nix build</code>.</p>
+</li>
+<li>
+<p><code>package 'helix-term'</code> This is the most direct confirmation of our &ldquo;hack&rdquo;. It
+tells us that our <code>default</code> package is <code>helix-term</code>. This confirms that our
+<code>overrideAttrs</code> in the <code>packages.${system}.default</code> section successfully
+targeted and modified the Helix editor package, which is internally named
+<code>helix-term</code> by the Helix flake.</p>
+</li>
+</ul>
+<p><strong>What This Does</strong>:</p>
+<ul>
+<li>
+<p><code>overrideAttrs</code> lets you change <em>only</em> parts of the derivation without
+rewriting everything.</p>
+</li>
+<li>
+<p><code>buildType = &quot;debug&quot;</code> enables debug builds.</p>
+</li>
+<li>
+<p><code>cargoBuildFlags</code> adds extra features passed to Cargo, e.g., <code>--features tokio-console</code></p>
+</li>
+<li>
+<p><code>RUSTFLAGS</code> gives you even more control over compiler behavior, optimization
+levels, etc.</p>
+</li>
+</ul>
+<p><strong>Run It</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix run
+</span></span></code></pre></div><p>Or drop into the dev shell:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix develop
+</span></span></code></pre></div><ul>
+<li>(assuming you also wire in a <code>devShells</code> output)</li>
+</ul>
+<p><strong>Adding the <code>devShells</code> output</strong>:</p>
+<p>Since we already have the helix flake as an input to our own <code>flake.nix</code> we can
+now forward or extend Helix&rsquo;s <code>devShells</code> like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>  outputs <span style="color:#f92672">=</span> { self<span style="color:#f92672">,</span> nixpkgs<span style="color:#f92672">,</span> helix<span style="color:#f92672">,</span> rust-overlay<span style="color:#f92672">,</span> <span style="color:#f92672">...</span> }: {
+</span></span><span style="display:flex;"><span>    devShells <span style="color:#f92672">=</span> helix<span style="color:#f92672">.</span>devShells;
+</span></span><span style="display:flex;"><span>  };
+</span></span></code></pre></div><p>Or if you want to pick a specific system:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>  outputs <span style="color:#f92672">=</span> { self<span style="color:#f92672">,</span> nixpkgs<span style="color:#f92672">,</span> helix<span style="color:#f92672">,</span> rust-overlay <span style="color:#f92672">...</span> }:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>      system <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;x86_64-linux&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">in</span> {
+</span></span><span style="display:flex;"><span>      devShells<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span> <span style="color:#f92672">=</span> helix<span style="color:#f92672">.</span>devShells<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span>;
+</span></span><span style="display:flex;"><span>    };
+</span></span></code></pre></div><p><strong>Optional: Combine with your own</strong> <code>devShell</code></p>
+<p>You can also extend or merge it with your own shell like so:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>  outputs <span style="color:#f92672">=</span> { self<span style="color:#f92672">,</span> nixpkgs<span style="color:#f92672">,</span> helix<span style="color:#f92672">,</span> rust-overlay<span style="color:#f92672">,</span> <span style="color:#f92672">...</span> }:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span>
+</span></span><span style="display:flex;"><span>      system <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;x86_64-linux&#34;</span>;
+</span></span><span style="display:flex;"><span>      pkgs <span style="color:#f92672">=</span> <span style="color:#f92672">import</span> nixpkgs { <span style="color:#66d9ef">inherit</span> system; };
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">in</span> {
+</span></span><span style="display:flex;"><span>      devShells<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span> <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        default <span style="color:#f92672">=</span> pkgs<span style="color:#f92672">.</span>mkShell {
+</span></span><span style="display:flex;"><span>          name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;my-shell&#34;</span>;
+</span></span><span style="display:flex;"><span>          inputsFrom <span style="color:#f92672">=</span> [ helix<span style="color:#f92672">.</span>devShells<span style="color:#f92672">.</span><span style="color:#e6db74">${</span>system<span style="color:#e6db74">}</span><span style="color:#f92672">.</span>default ];
+</span></span><span style="display:flex;"><span>          buildInputs <span style="color:#f92672">=</span> [ pkgs<span style="color:#f92672">.</span>git ];
+</span></span><span style="display:flex;"><span>        };
+</span></span><span style="display:flex;"><span>      };
+</span></span><span style="display:flex;"><span>    };
+</span></span></code></pre></div></section></main>
+        <footer id="main-footer"><div class="footer">
+  <a href="#">Scroll to Top</a>
+  <div class="footer-copyright">
+    <div class="dim">© 2025 </div>
+    <div>Made with ❤️ and powered by <a href="https://github.com/math-queiroz/rusty-typewriter" target="_blank">Rusty Typewriter</a> theme for <a href="https://gohugo.io/" target="_blank">Hugo</a></div>
+  </div>
+</div>
+</footer>
+      </div><aside id="side-pane" class="side-sticky"><div class="side-details">
+    <span>2883 words</span>
+    <span>22 - 28 minutes read</span></div><h3>Table Of Contents</h3><nav id="TableOfContents">
+  <ul>
+    <li><a href="#understanding-the-helix-flakenix">Understanding the Helix flake.nix</a></li>
+    <li><a href="#top-level-metadata">Top-Level Metadata</a></li>
+    <li><a href="#inputs">Inputs</a></li>
+    <li><a href="#outputs-function">Outputs Function</a></li>
+    <li><a href="#common-setup">Common Setup</a>
+      <ul>
+        <li><a href="#breaking-down-helixdefaultnix">Breaking Down <code>helix/default.nix</code></a></li>
+        <li><a href="#making-actual-changes">Making Actual Changes</a></li>
+        <li><a href="#another-way-to-modify-behavior">Another way to Modify Behavior</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></aside></div>
+  </div>
+</body>
+</html>

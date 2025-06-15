@@ -1,0 +1,23 @@
+╭───┬────────────╮
+│ 0 │ x1b[?1049h │
+│ 1 │ >          │
+│ 2 │ /dev/tty   │
+╰───┴────────────╯{{ define "main" }}
+<div class="search-page">
+  {{ partial "search_bar.html" . }}
+
+  <div class="search-results">
+    {{/* Search results will be injected here by JavaScript */}}
+  </div>
+
+  <template>
+    <div class="search-result">
+      <a href=""><h2 class="title"></h2></a>
+      <time datetime=""></time>
+      <div class="content"></div>
+    </div>
+  </template>
+
+  <div class="search-loading">{{ i18n "loading" }}...</div>
+</div>
+{{ end }}

@@ -1,0 +1,16 @@
+{{- /* layouts/index.json */ -}}
+[
+  {{- $pages := where .Site.Pages "Params.private" "ne" true -}}
+  {{- range $index, $page := $pages -}}
+    {{- if $index }},{{ end }}
+    {
+      "id": {{ $index }},
+      "title": {{ $page.Title | jsonify }},
+      "summary": {{ $page.Summary | plainify | jsonify }},
+      "content": {{ $page.Plain | jsonify }},
+      "tags": {{ $page.Params.tags | default (slice) | jsonify }},
+      "date": {{ $page.Date.Format "2006-01-02" | jsonify }},
+      "permalink": {{ $page.Permalink | jsonify }}
+    }
+  {{- end -}}
+]

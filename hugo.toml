@@ -1,0 +1,12 @@
+baseURL = 'https://TSawyer87.github.io'
+languageCode = 'en-us'
+title = 'NixOS Blog'
+theme = "rusty-typewriter"
+generateFeeds = true
+[outputs]
+home = ["HTML", "RSS", "JSON", "SearchIndex"]
+
+[outputFormats.SearchIndex]
+mediaType = "application/json"
+baseName = "searchindex"
+isPlainText = true
