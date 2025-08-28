@@ -1,0 +1,332 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Gpg Agent_on_nixos | NixOS Blog</title><link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://TSawyer87.github.io/posts/gpg-agent_on_nixos/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Gpg Agent_on_nixos"><meta property="og:description" content="GnuPG, OpenPGP, and gpg-agent on NixOS GnuPG, OpenPGP, and gpg-agent on NixOS Asymmetric Encryption (Public-Key cryptography) Remove and Store your Primary Key offline Add your PGP Key to GitHub Sign your Commits for Git Backing up Your Private Keys Encrypt a File with PGP List your keys and get the key ID Encrypt a file for yourself Email Encryption Make your Public Key Highly Available ⚠️ SECURITY WARNING: This guide involves sensitive cryptographic material. Never share your private key or passphrase. Backup your keys and handle them with extreme care."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-08-24T10:24:06-04:00"><meta property="article:modified_time" content="2025-08-24T10:24:06-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Gpg Agent_on_nixos"><meta name=twitter:description content="GnuPG, OpenPGP, and gpg-agent on NixOS GnuPG, OpenPGP, and gpg-agent on NixOS Asymmetric Encryption (Public-Key cryptography) Remove and Store your Primary Key offline Add your PGP Key to GitHub Sign your Commits for Git Backing up Your Private Keys Encrypt a File with PGP List your keys and get the key ID Encrypt a file for yourself Email Encryption Make your Public Key Highly Available ⚠️ SECURITY WARNING: This guide involves sensitive cryptographic material. Never share your private key or passphrase. Backup your keys and handle them with extreme care."><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.f27a56e991be000b70f16c1055f85c5c8a52543dd12df8dc254055463a69e878.css integrity="sha256-8npW6ZG+AAtw8WwQVfhcXIpSVD3RLfjcJUBVRjpp6Hg=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://TSawyer87.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/><span itemprop=name>Home</span>
+</a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/posts/><span itemprop=name>Posts</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Gpg Agent_on_nixos</h1><time class=dim datetime=2025-08-24T10:24:06-04:00>August 24, 2025</time></div><section class=page-section><h2 id=gnupg-openpgp-and-gpg-agent-on-nixos>GnuPG, OpenPGP, and <code>gpg-agent</code> on NixOS</h2><ul><li><a href=#gnupg-openpgp-and-gpg-agent-on-nixos>GnuPG, OpenPGP, and gpg-agent on NixOS</a></li><li><a href=#asymmetric-encryption-public-key-cryptography>Asymmetric Encryption (Public-Key cryptography)</a><ul><li><a href=#remove-and-store-your-primary-key-offline>Remove and Store your Primary Key offline</a></li></ul></li><li><a href=#add-your-pgp-key-to-github>Add your PGP Key to GitHub</a><ul><li><a href=#sign-your-commits-for-git>Sign your Commits for Git</a></li><li><a href=#backing-up-your-private-keys>Backing up Your Private Keys</a></li></ul></li><li><a href=#encrypt-a-file-with-pgp>Encrypt a File with PGP</a><ul><li><a href=#list-your-keys-and-get-the-key-id>List your keys and get the key ID</a></li><li><a href=#encrypt-a-file-for-yourself>Encrypt a file for yourself</a></li></ul></li><li><a href=#email-encryption>Email Encryption</a></li><li><a href=#make-your-public-key-highly-available>Make your Public Key Highly Available</a></li></ul><blockquote><p>⚠️ <strong>SECURITY WARNING</strong>: This guide involves sensitive cryptographic material.
+<strong>Never share your private key or passphrase</strong>. Backup your keys and handle
+them with extreme care.</p></blockquote><p>GnuPG is a complete and free implementation of the OpenPGP standard. It allows
+you to encrypt and sign your data and communications, has a versatile key
+management system, and access modules for many kinds of public key directories.
+GnuPG (GPG), is a command line tool</p><p><strong>PGP (Pretty Good Privacy)</strong> and <strong>GPG (GNU Privacy Guard)</strong>. While distinct,
+they are deeply interconnected and, for the rest of this section, I&rsquo;ll use the
+terms interchangeably.</p><p><strong>PGP</strong> was the original, groundbreaking software that brought robust public-key
+cryptography to the masses. It set the standard for secure email communication.
+However, PGP later became a commercial product.</p><p>To provide a free and open-source alternative that anyone could use and inspect,
+<strong>GPG</strong> was created. Crucially, <strong>GPG</strong> is a complete implementation of the
+OpenPGP standard. This open standard acts as a universal language for encryption
+and digital signatures.</p><h2 id=asymmetric-encryption-public-key-cryptography>Asymmetric Encryption (Public-Key cryptography)</h2><p>E2ee requires that every sender and recipient does a one time preparation, which
+involves the generation of personal random numbers. Two such random numbers are
+necessary, one will be called your secret key and another one will be called
+your public key (together your <em>personal key</em>). These numbers are very big, they
+consist of hundreds or thousands of digits.</p><p>A message can be encrypted using the recipients public key and can only be
+decrypted with the matching private key. In other words, if you exchange
+<strong>public keys</strong> with someone you both can encrypt messages that only the other
+can decrypt with their own <strong>private key</strong>. <strong>You must never share the private
+key or the private keys passphrase with anyone else</strong>.</p><p><strong>What’s safe to share?</strong></p><ul><li><p>Your public key (used to encrypt files and verify signatures)</p></li><li><p>Your key ID (identifies your key, useful for sharing public keys or configs)</p></li><li><p>Your keys fingerprint <code>gpg --fingerprint</code></p></li></ul><p><strong>What must never be shared?</strong></p><ul><li><p>Your private (secret) key, usually in your <code>~/.gnupg/private-keys-v1.d/</code>
+directory. Usually called your <em>keyring</em>.</p></li><li><p>Your passphrase for your private key.</p></li></ul><p><strong>Best Practices</strong></p><p>Don&rsquo;t rely on the short KeyID, at least use long OpenPGP Key IDs (for example
+0xA1E6148633874A3D), they are 64 bits long and harder to spoof. Even better, use
+the fingerprint.This is accomplished in the configuration with
+<code>keyid-format = "0xlong";</code>, and <code>with-fingerprint</code>.</p><p>Don&rsquo;t blindly trust keys from keyservers. You should verify the full key
+fingerprint with the owner over the phone if possible.</p><p>Use a strong primary key, 1024-bit DSA, 1024-bit RSA, and the use of SHA-1 for
+signing are no longer recommended. We use <code>AES256</code> (Advanced Encryption Standard
+256-bit key), and <code>SHA512</code> by default in the following configuration.</p><p>Choose an expiration date less than 2 years, you can add time if needed.
+Remember this date.</p><p>Keep your primary key offline, this ensures that it can&rsquo;t be stolen by an
+attacker allowing him to create new identities. We accomplish this by creating
+subkeys and only adding the subkeys keygrip and the subkeys <code>default-key</code> to our
+configuration keeping the primary key out of it.</p><p>Many of these best practices come from the following guide:</p><ul><li><a href=https://riseup.net/ru/security/message-security/openpgp/gpg-best-practices>RiseUp gpg-best-practices</a></li></ul><hr><p>Home Manager module with <code>gpg-agent</code>, <code>gnupg</code>, and <code>pinentry-gnome3</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># gpg-agent.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: {
+</span></span><span style=display:flex><span>  options <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    custom<span style=color:#f92672>.</span>pgp <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption {
+</span></span><span style=display:flex><span>        description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Enable PGP Gnupgp&#34;</span>;
+</span></span><span style=display:flex><span>        default <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf config<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>pgp<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>    services <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      <span style=color:#75715e>## Enable gpg-agent with ssh support</span>
+</span></span><span style=display:flex><span>      gpg-agent <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>        enableSshSupport <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>        enableZshIntegration <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>        <span style=color:#75715e># pinentry is a collection of simple PIN or passphrase dialogs used for</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># password entry</span>
+</span></span><span style=display:flex><span>        pinentryPackage <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>pinentry-gnome3;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>## We will put our keygrip here</span>
+</span></span><span style=display:flex><span>      gpg-agent<span style=color:#f92672>.</span>sshKeys <span style=color:#f92672>=</span> [];
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>    home<span style=color:#f92672>.</span>packages <span style=color:#f92672>=</span> [pkgs<span style=color:#f92672>.</span>gnupg];
+</span></span><span style=display:flex><span>    programs <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      gpg <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        <span style=color:#75715e>## Enable GnuPG</span>
+</span></span><span style=display:flex><span>        enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># homedir = &#34;/home/userName/.config/gnupg&#34;;</span>
+</span></span><span style=display:flex><span>        settings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Default/trusted key ID (helpful with throw-keyids)</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Example, you will put your own keyid here</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Use `gpg --list-keys`</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># default-key = &#34;0x37ACBCDA569C5C44788&#34;;</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># trusted-key = &#34;0x37ACBCDA569C5C44788&#34;;</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># https://github.com/drduh/config/blob/master/gpg.conf</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># https://www.gnupg.org/documentation/manuals/gnupg/GPG-Configuration-Options.html</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># https://www.gnupg.org/documentation/manuals/gnupg/GPG-Esoteric-Options.html</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Some Best Practices, stronger algos etc</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Use AES256, 192, or 128 as cipher</span>
+</span></span><span style=display:flex><span>          personal-cipher-preferences <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;AES256 AES192 AES&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Use SHA512, 384, or 256 as digest</span>
+</span></span><span style=display:flex><span>          personal-digest-preferences <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;SHA512 SHA384 SHA256&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Use ZLIB, BZIP2, ZIP, or no compression</span>
+</span></span><span style=display:flex><span>          personal-compress-preferences <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;ZLIB BZIP2 ZIP Uncompressed&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Default preferences for new keys</span>
+</span></span><span style=display:flex><span>          default-preference-list <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;SHA512 SHA384 SHA256 AES256 AES192 AES ZLIB BZIP2 ZIP Uncompressed&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># SHA512 as digest to sign keys</span>
+</span></span><span style=display:flex><span>          cert-digest-algo <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;SHA512&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># SHA512 as digest for symmetric ops</span>
+</span></span><span style=display:flex><span>          s2k-digest-algo <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;SHA512&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># AES256 as cipher for symmetric ops</span>
+</span></span><span style=display:flex><span>          s2k-cipher-algo <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;AES256&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># UTF-8 support for compatibility</span>
+</span></span><span style=display:flex><span>          charset <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;utf-8&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Show Unix timestamps</span>
+</span></span><span style=display:flex><span>          fixed-list-mode <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># No comments in signature</span>
+</span></span><span style=display:flex><span>          no-comments <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># No version in signature</span>
+</span></span><span style=display:flex><span>          no-emit-version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Disable banner</span>
+</span></span><span style=display:flex><span>          no-greeting <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Long hexidecimal key format</span>
+</span></span><span style=display:flex><span>          keyid-format <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;0xlong&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Display UID validity</span>
+</span></span><span style=display:flex><span>          list-options <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;show-uid-validity&#34;</span>;
+</span></span><span style=display:flex><span>          verify-options <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;show-uid-validity&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Display all keys and their fingerprints</span>
+</span></span><span style=display:flex><span>          with-fingerprint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Cross-certify subkeys are present and valid</span>
+</span></span><span style=display:flex><span>          require-cross-certification <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Disable caching of passphrase for symmetrical ops</span>
+</span></span><span style=display:flex><span>          no-symkey-cache <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Enable smartcard</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># use-agent = &#34;&#34;;</span>
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><p>The default path is <code>~/.gnupg</code>, if you prefer placing it in the <code>~/.config</code>
+directory or elsewhere, uncomment the <code>homedir</code> line and change <code>userName</code> to
+your username.</p></li><li><p>I use hyprland so <code>pinentry-gnome3</code> works for me, there is also the following
+options for this attribute:</p></li><li><p><code>pinentry-tty</code></p></li><li><p><code>pinentry-qt</code></p></li><li><p><code>pinentry-gtk2</code></p></li></ul><p>And more, research what you need and use the correct one.</p><p>Enable in your <code>home.nix</code> or equivalent:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># home.nix</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># ... snip ...</span>
+</span></span><span style=display:flex><span>imports <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>./gpg-agent.nix</span>
+</span></span><span style=display:flex><span>];
+</span></span><span style=display:flex><span>custom<span style=color:#f92672>.</span>pgp<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span><span style=color:#75715e># ... snip ...</span>
+</span></span></code></pre></div><p><code>gpg --full-generate-key</code> can be used to generate a basic keypair, adding
+<code>--expert</code> gives more options and capabilities needed for <code>gpg-agent</code>.</p><blockquote><p>❗ NOTE: We will first generate our GPG primary key, it is often recommended
+to store your primary key offline and use your subkeys for encrypting and
+signing.</p></blockquote><p>To generate your gpg primary key you can do the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --full-generate-key
+</span></span></code></pre></div><ul><li><p>Choose (9) ECC (sign and encrypt)</p></li><li><p>Give it a name and description</p></li><li><p>Give it an expiration date, 1y is common</p></li><li><p>Use a strong passphrase or password</p></li><li><p>Give it a comment, I typically add the date</p></li></ul><p>If you see a warning about incorrect permissions, you can run the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>chmod <span style=color:#ae81ff>700</span> ~/.gnupg
+</span></span><span style=display:flex><span>chmod <span style=color:#ae81ff>600</span> ~/.gnupg/*
+</span></span></code></pre></div><p>Verify:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ls -ld ~/.gnupg
+</span></span><span style=display:flex><span><span style=color:#75715e># Should show: drwx------</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>ls -l ~/.gnupg
+</span></span><span style=display:flex><span><span style=color:#75715e># Files should show: -rw-------</span>
+</span></span></code></pre></div><p>After fixing, run <code>gpg --list-keys</code>, which lists your public keys:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Take note of your public key</span>
+</span></span><span style=display:flex><span>gpg --list-keys
+</span></span><span style=display:flex><span>/home/jr/.gnupg/pubring.kbx
+</span></span><span style=display:flex><span>---------------------------
+</span></span><span style=display:flex><span>pub   ed25519/0x095722C1A124CF15 2025-08-23 <span style=color:#f92672>[</span>SCA<span style=color:#f92672>]</span> <span style=color:#f92672>[</span>expires: 2026-08-23<span style=color:#f92672>]</span>
+</span></span></code></pre></div><ul><li>Copy the KeyID, in this example it would be <code>0x095722C1A124CF15</code>. We will use
+it for the command below.</li></ul><p>The warning should be gone.</p><p>Now we will generate 2 subkeys, 1 for encryption and 1 for authentication.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --expert --edit-key 0x095722C1A124CF15
+</span></span></code></pre></div><p>Choose 11 (set your own capabilities) and add A (Authenticate) and type <code>save</code>
+to save and exit. Repeat this again and choose ECC (encrypt only).</p><p><strong>Add Keygrip of Authenticate Subkey to <code>sshcontrol</code> for gpg-agent</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --list-secret-keys --with-keygrip --keyid-format LONG
+</span></span></code></pre></div><p>Copy the keygrip of the subkey with Authenticate capabilities</p><p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild, this adds an SSH
+key to <code>gpg-agent</code>. This is for the SSH key functionality of <code>gpg-agent</code>, while
+the key ID (<code>default-key</code>) is for GPG-specific operations like signing commits:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># gpg-agent.nix</span>
+</span></span><span style=display:flex><span>gpg-agent<span style=color:#f92672>.</span>sshKeys <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;6BD11826F3845BC222127FE3D22C92C91BB3FB32&#34;</span>];
+</span></span></code></pre></div><ul><li>By itself, a keygrip cannot be used to reconstruct your private key. It&rsquo;s
+derived from the public key material, not from the secret key itself so it&rsquo;s
+safe to version control. Don&rsquo;t put your keygrip in a public repo if you don&rsquo;t
+want people to know you use that key for signing/authentication. It&rsquo;s not a
+security risk, but it leaks a tiny bit of metadata.</li></ul><p>The following article mentions the keygrip being computed from public elements
+of the key:</p><ul><li><a href=https://gnupg-users.gnupg.narkive.com/q5JtahdV/gpg-agent-what-is-a-keygrip>gnupg-users what-is-a-keygrip</a></li></ul><p>Add the KeyId to your <code>gpg-agent.nix</code>, this declares your default-key to persist
+through rebuilds:</p><p>Copy the public key of the same subkey with Authenticate capabilities you will
+see something like <code>[SA]</code> next to it for Sign and Authenticate:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># gpg-agent.nix</span>
+</span></span><span style=display:flex><span>gpg<span style=color:#f92672>.</span>settings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Replace with your own Subkeys KeyID `gpg --list-keys --keyid-format LONG`</span>
+</span></span><span style=display:flex><span>    default-key <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Ox37ACA569C5C44787&#34;</span>;
+</span></span><span style=display:flex><span>    trusted-key <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Ox37ACA569C5C44787&#34;</span>;
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p>Rebuild, and check that everything is correct with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ssh-add -L
+</span></span><span style=display:flex><span><span style=color:#75715e># you should see something like:</span>
+</span></span><span style=display:flex><span>ssh-ed25519 AABCC3NzaC1lZDI1NTE5ABBAIHyujgyCjjBTqIuFM3EMUSo6RGklmOXQW3uWRhWdJ1Mm <span style=color:#f92672>(</span>none<span style=color:#f92672>)</span>
+</span></span></code></pre></div><ul><li>Never version-control your private key files or <code>.gnupg</code> contents.</li></ul><p>Add the following to your shell config:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># zsh.nix</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># ... snip ...</span>
+</span></span><span style=display:flex><span>initContent <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;</span>
+</span></span><span style=display:flex><span>    export GPG_TTY<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>tty<span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    export SSH_AUTH_SOCK<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>gpgconf --list-dirs agent-ssh-socket<span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    gpgconf --launch gpg-agent
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#39;&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#75715e># ... snip ...</span>
+</span></span></code></pre></div><p>Rebuild and then restart <code>gpg-agent</code> if necessary:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpgconf --kill gpg-agent
+</span></span><span style=display:flex><span>gpgconf --launch gpg-agent
+</span></span></code></pre></div><p>Test, these should match:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>echo <span style=color:#e6db74>&#34;</span>$SSH_AUTH_SOCK<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># output</span>
+</span></span><span style=display:flex><span>/run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76534j/S.gpg-agent.ssh
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>gpgconf --list-dirs agent-ssh-socket
+</span></span><span style=display:flex><span><span style=color:#75715e># output</span>
+</span></span><span style=display:flex><span>/run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76834j/S.gpg-agent.ssh
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ssh-add -L
+</span></span><span style=display:flex><span><span style=color:#75715e># Copy the entire following line:</span>
+</span></span><span style=display:flex><span>ssh-ed25519 AABBC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I <span style=color:#f92672>(</span>none<span style=color:#f92672>)</span>
+</span></span></code></pre></div><ul><li>Mine shows <code>(none)</code> because I left the comment field blank when creating the
+key and doesn&rsquo;t affect functionality.</li></ul><p>Then, in your server&rsquo;s NixOS configuration (e.g., <code>configuration.nix</code>): Change
+<code>yourUser</code> to your username. This is how you grant access to a remote machine,
+and the public key from the GPG subkey is what&rsquo;s added here, the output of
+<code>ssh-add -L</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>users<span style=color:#f92672>.</span>users<span style=color:#f92672>.</span>yourUser <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>openssh <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>  authorizedKeys<span style=color:#f92672>.</span>keys <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Replace with the output of `ssh-add -L`</span>
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I (none)&#34;</span>
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><blockquote><p>❗ NOTE: Only the <strong>public</strong> key goes here, it&rsquo;s safe to commit to version
+control. If you prefer not to hardcode it in the config, you can reference it
+from a <code>.pub</code> file in your repo and read it with
+<code>builtins.readFile ./mykey.pub</code></p></blockquote><p>Rebuild your system and test an SSH connection into the server:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ssh -p &lt;your-port&gt; user@hostname
+</span></span></code></pre></div><ul><li><code>&lt;your-port></code> is often <code>22</code> so it would be something like:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ssh -p <span style=color:#ae81ff>22</span> bill@xps
+</span></span></code></pre></div><p>Once you successfully sign in to SSH, it will ask you if you&rsquo;re sure you trust
+the remote server&rsquo;s SSH host key. Once you type <code>yes</code>, it will automatically be
+used for tasks such as file decryption.</p><h3 id=remove-and-store-your-primary-key-offline>Remove and Store your Primary Key offline</h3><p>Since we added our Subkeys keygrip to our <code>gpg-agent.nix</code> and :</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># extract the primary key</span>
+</span></span><span style=display:flex><span>gpg -a --export-secret-key sayls8@proton.me &gt; secret_key
+</span></span><span style=display:flex><span><span style=color:#75715e># extract the subkeys, which we will reimport later</span>
+</span></span><span style=display:flex><span>gpg -a --export-secret-subkeys sayls8@proton.me &gt; secret_subkeys.gpg
+</span></span><span style=display:flex><span><span style=color:#75715e># delete the secret keys from the keyring, so only subkeys are left</span>
+</span></span><span style=display:flex><span>gpg --delete-secret-keys sayls8@proton.me
+</span></span><span style=display:flex><span>Delete this key from the keyring? <span style=color:#f92672>(</span>y/N<span style=color:#f92672>)</span> y
+</span></span><span style=display:flex><span>This is a secret key! - really delete? <span style=color:#f92672>(</span>y/N<span style=color:#f92672>)</span> y
+</span></span><span style=display:flex><span><span style=color:#75715e># reimport the subkeys</span>
+</span></span><span style=display:flex><span>gpg --import secret_subkeys.gpg
+</span></span><span style=display:flex><span><span style=color:#75715e># verify everything is in order</span>
+</span></span><span style=display:flex><span>gpg --list-secret-keys
+</span></span><span style=display:flex><span><span style=color:#75715e># remove the subkeys from disk</span>
+</span></span><span style=display:flex><span>rm secret_subkeys.gpg
+</span></span></code></pre></div><p>Then store <code>secret_key</code> on an encrypted USB drive or somewhere offline.</p><p>You can check that the secret key material is missing with
+<code>gpg --list-secret-keys</code>, you should see <code>sec#</code> instead of <code>sec</code>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --list-secret-keys
+</span></span><span style=display:flex><span><span style=color:#75715e># Output:</span>
+</span></span><span style=display:flex><span>sec#  ed25519/0x
+</span></span><span style=display:flex><span><span style=color:#75715e># ...snip...</span>
+</span></span></code></pre></div><p>The above set of commands are from the
+<a href=https://riseup.net/ru/security/message-security/openpgp/gpg-best-practices#keep-your-primary-key-entirely-offline>RiseUp Keep your primary key offline</a></p><h2 id=add-your-pgp-key-to-github>Add your PGP Key to GitHub</h2><p>Plug your own public key from <code>gpg --list-keys</code> in the following command:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --armor --export &lt;Public-Key&gt;
+</span></span></code></pre></div><p>Copy the entire block from <code>-----BEGIN PGP PUBLIC KEY BLOCK-----</code> to
+<code>-----END PGP PUBLIC KEY BLOCK-----</code></p><blockquote><p>❗ You can also paste the above block into a public keyserver such as
+<code>keys.openpgp.org</code>. This allows others to find and use your key to encrypt
+messages or verify your signatures. Many tools and users rely on public key
+servers to fetch keys automatically. You can also publish your revocation
+certificates, which help others know if your key is compromised or revoked.
+This can be a privacy concern as key servers publish (and keep) associated
+user IDs and metadata linked to your key, such as your email.</p></blockquote><p>It&rsquo;s the same process as adding an SSH key, Go to Settings, SSH and GPG keys,
+<code>New GPG key</code> and your all set.</p><h3 id=sign-your-commits-for-git>Sign your Commits for Git</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># git.nix</span>
+</span></span><span style=display:flex><span>{<span style=color:#f92672>...</span>}: {
+</span></span><span style=display:flex><span>    programs<span style=color:#f92672>.</span>git <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>      extraConfig <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          commit<span style=color:#f92672>.</span>gpgsign <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>          user<span style=color:#f92672>.</span>signingkey <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;0x0666C1A265F156&#34;</span>
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>After this, you will be prompted for your Private Keys password on every commit.</p><p>If you look at your commits on GitHub, after adding the GPG key and the above
+settings to your git setup it will show your commits are <code>Verified</code>.</p><h3 id=backing-up-your-private-keys>Backing up Your Private Keys</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --export-secret-keys --armor --output my-private-key-backup.gpg
+</span></span></code></pre></div><p>Your private keys will be encrypted with a passphrase into a .gpg file. Store
+this backup in a secure location line an encrypted USB drive. This can prevent
+you from losing access to your keys in the case of disk failure or accidents.</p><p>You can export your public keys and publish them publicly if you choose:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --export --armor --output my-public-keys.gpg
+</span></span></code></pre></div><p>Now if your keys ever get lost or corrupted, you can import these backups.</p><h2 id=encrypt-a-file-with-pgp>Encrypt a File with PGP</h2><p>The easy way to do this is with an app like Kleopatra, available as
+<code>pkgs.kdePackages.kleopatra</code>. Kleopatra will automatically recognize your gpg
+keys and enable you to easily encrypt messages by clicking the Notepad, typing
+your message and clicking <code>Sign/Encrypt Notepad</code>. You can also choose to encrypt
+the message with a password, where anyone that has the password can read the
+message.</p><p>Using the above and below methods enable you to encrypt any message for
+basically any service and just copy past the encrypted text into the service for
+added privacy.</p><p>Encrypting a whole directory is a bit more involved and requires using
+compression.</p><h3 id=list-your-keys-and-get-the-key-id>List your keys and get the key ID</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --list-keys --keyid-format LONG
+</span></span></code></pre></div><p>Example output, don&rsquo;t use RSA keys:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>pub   rsa4096/ABCDEF1234567890 2024-01-01 <span style=color:#f92672>[</span>SC<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>uid           <span style=color:#f92672>[</span>ultimate<span style=color:#f92672>]</span> Your Name &lt;you@example.com&gt;
+</span></span><span style=display:flex><span>sub   rsa4096/1234567890ABCDEF 2024-01-01 <span style=color:#f92672>[</span>E<span style=color:#f92672>]</span>
+</span></span></code></pre></div><ul><li><p>The part after the slash on the <code>pub</code> line is your key ID (<code>ABCDEF1234567890</code>
+in the example)</p></li><li><p>You can also use your email or name to refer to the key in most commands.</p></li></ul><h3 id=encrypt-a-file-for-yourself>Encrypt a file for yourself</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>echo <span style=color:#e6db74>&#34;This file will be encrypted&#34;</span> &gt; file.txt
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --encrypt --recipient ABCDEF1234567890 file.txt
+</span></span></code></pre></div><p>If you have someone&rsquo;s public key, you can just as easily encrypt a file that
+only they can decrypt. This is where public keyservers come in handy.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ls
+</span></span><span style=display:flex><span>│  <span style=color:#ae81ff>7</span> │ file.txt            │ file │     <span style=color:#ae81ff>28</span> B │ now           │
+</span></span><span style=display:flex><span>│  <span style=color:#ae81ff>8</span> │ file.txt.gpg        │ file │    <span style=color:#ae81ff>191</span> B │ now           │
+</span></span></code></pre></div><p><code>gpg --encrypt</code> doesn&rsquo;t modify the original file. It creates a new encrypted
+file by default with <code>gpg</code> amended to the filename.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --decrypt file.txt.gpg
+</span></span><span style=display:flex><span>gpg: encrypted with cv25519 key, ID 0x4AC131B80CEC833E, created 2025-07-31
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;GPG Key &lt;sayls8@proton.me&gt;&#34;</span>
+</span></span><span style=display:flex><span>This file will be encrypted
+</span></span></code></pre></div><p>Or, to save the decrypted text to a file:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --output decrypted_file.txt --decrypt file.txt.gpg
+</span></span><span style=display:flex><span>cat decrypted_file.txt
+</span></span><span style=display:flex><span><span style=color:#75715e># Output</span>
+</span></span><span style=display:flex><span>File: decrypted.txt
+</span></span><span style=display:flex><span>This file will be encrypted
+</span></span></code></pre></div><ul><li>You will be asked for the passphrase you used when creating the key in order
+to decrypt the file.</li></ul><h2 id=email-encryption>Email Encryption</h2><p>Email is inherently insecure, and email-based attacks remain one of the top
+vectors for data breaches. Encrypting your email protects your privacy by
+ensuring that only the intended recipient can read it. Encrypting your emails
+with PGP provides valuable security benefits but also has inherent limitations
+that prevent it from being considered truly “secure communication” by modern
+standards.</p><p>What its Good for:</p><ul><li><p>Confidentiality, it prevents unauthorized third parties (like email providers
+or network eavesdroppers) from reading your email content.</p></li><li><p>Integrity and authenticity: Digital signatures verify that the email genuinely
+came from the claimed sender and hasn&rsquo;t been altered in transit.</p></li><li><p>Long-term confidentiality: Encrypted emails stored on servers or devices
+remain protected even if the storage is later compromised. With companies like
+Gmail giving you a &ldquo;free&rdquo; account, that usually means that you are the product
+and you should tread lightly.</p></li></ul><p><strong>To securely communicate with someone never use email, use a dedicated service
+such as Signal or Brair.</strong></p><p>With Thunderbird you can go to settings, Privacy and Security, and scroll to the
+bottom where it says &ldquo;End to End Encryption&rdquo;, Click the Settings tab there,
+finally click End-To-End Encryption on the left.</p><p>From there, you can click <code>+ Add Key</code> next to your email address and either
+generate a new key through Thunderbird. If you use this, choose the Curve
+protocol or whatever isn&rsquo;t RSA.</p><p>Or import your own key which is definitely more secure since you&rsquo;re not trusting
+someone else with your private key:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --export --armor sayls8@gmail.com &gt; publickey.asc
+</span></span></code></pre></div><p>Then select <code>+ Add Key</code> and choose import your own, this didn&rsquo;t work for me.
+What did work was to start composing an email and click on the <code>OpenPGP</code> button,
+Go to <code>Key Manager</code>, <code>File</code>, <code>Import Public Key from a File</code> and choose your
+<code>publickey.asc</code>. This way, only you have access to your private key.</p><ul><li><a href=https://support.mozilla.org/en-US/kb/introduction-to-e2e-encryption#w_how-e2ee-with-openpgp-works-in-general>How e2ee with OpenPGP works in general</a></li></ul><p><strong>Import your recipient&rsquo;s public key</strong></p><p>When you start composing an email, you&rsquo;ll see that you need to resolve key
+issues if you don&rsquo;t already have the recipients public key. Click <code>Resolve</code>, and
+either Discover Public Keys Online&mldr; or Import Public Keys From File&mldr;</p><p>Thunderbird has the option to use the OpenPGP Key Manager to view or manage
+public keys of your correspondents.</p><p>If you&rsquo;re sending encrypted emails to someone you&rsquo;ll need their public key,
+there are a few methods of doing this just ensure you verify the Fingerprint
+with the person your talking to.</p><blockquote><p>❗ NOTE: You can use PGP to encrypt any message and paste it into <strong>any</strong>
+software and send it. As long as only you and your recipient are the only
+people to have the private keys, you will be the only people able to decrypt
+the messages.</p></blockquote><h2 id=make-your-public-key-highly-available>Make your Public Key Highly Available</h2><p>There&rsquo;s nothing malicious that can happen if unknown people have your public
+key. That said, it may be beneficial to make your public key publicly available.
+People can find your info to send you messages securely from your first
+interaction. You can send your public key with the command below:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --output ~/mygpg.key --armor --export your_email@address.com
+</span></span></code></pre></div><p>You can then send this file to the other party.</p><p>You can also use the GPG interface to upload your key to a key server:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --list-keys your_email@address.com
+</span></span></code></pre></div><p>Copy the key ID for the following command, remember its on the <code>pub</code> line after
+the <code>/</code>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>gpg --send-keys --keyserver pgp.mit.edu key_id
+</span></span></code></pre></div><p>The key will be uploaded to the server and likely be distributed to other key
+servers around the world. This is why expiration dates are important, if your
+key is lost or stolen, the damage window is limited to the expiration period.
+Also remember, you can add more time even after the key has expired.</p><p>There is much more you can do with PGP beyond simple file encryption:</p><ul><li><p>Encrypt for multiple recipients: Share encrypted data with teammates using
+their public keys.</p></li><li><p>Use smartcards or YubiKeys: Store your private key on hardware for extra
+security.</p></li><li><p>Verify software releases: Check that downloaded files are genuine using the
+developer’s signature.</p></li><li><p>Integrate with Git: Sign tags and commits so others can trust your repository
+history.</p></li><li><p>Encrypt Email</p></li></ul><p>This guide only scratches the surface — once your PGP key and <code>gpg-agent</code> are
+set up, these capabilities become easy to add to your workflow.</p></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>3225 words</span>
+<span>21 - 27 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#gnupg-openpgp-and-gpg-agent-on-nixos>GnuPG, OpenPGP, and <code>gpg-agent</code> on NixOS</a></li><li><a href=#asymmetric-encryption-public-key-cryptography>Asymmetric Encryption (Public-Key cryptography)</a><ul><li><a href=#remove-and-store-your-primary-key-offline>Remove and Store your Primary Key offline</a></li></ul></li><li><a href=#add-your-pgp-key-to-github>Add your PGP Key to GitHub</a><ul><li><a href=#sign-your-commits-for-git>Sign your Commits for Git</a></li><li><a href=#backing-up-your-private-keys>Backing up Your Private Keys</a></li></ul></li><li><a href=#encrypt-a-file-with-pgp>Encrypt a File with PGP</a><ul><li><a href=#list-your-keys-and-get-the-key-id>List your keys and get the key ID</a></li><li><a href=#encrypt-a-file-for-yourself>Encrypt a file for yourself</a></li></ul></li><li><a href=#email-encryption>Email Encryption</a></li><li><a href=#make-your-public-key-highly-available>Make your Public Key Highly Available</a></li></ul></nav></aside></div></div></body></html>

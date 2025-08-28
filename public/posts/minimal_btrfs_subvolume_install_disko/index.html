@@ -1,439 +1,245 @@
-<!DOCTYPE html>
-<html lang="en-us" dir="ltr">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
-  <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Minimal_btrfs_subvolume_install_disko | NixOS Blog</title>
-<link rel="icon" href="favicon.svg" sizes="any" type="image/svg+xml" /><meta property="og:url" content="http://localhost:1313/posts/minimal_btrfs_subvolume_install_disko/">
-  <meta property="og:site_name" content="NixOS Blog">
-  <meta property="og:title" content="Minimal_btrfs_subvolume_install_disko">
-  <meta property="og:description" content="Minimal BTRFS-Subvol Install with Disko and Flakes Why I Chose BTRFS I chose BTRFS because I was already familiar with it from using it with Arch Linux and I found it to be very easy to use. From what I’ve read, there are licensing issues between the Linux Kernel and ZFS which means that ZFS is not part of the Linux Kernel; it’s maintained by the OpenZFS project and available as a separate kernel module. This can cause issues and make you think more about your filesystem than I personally want to at this point.">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2025-06-15T18:14:54-04:00">
-    <meta property="article:modified_time" content="2025-06-15T18:14:54-04:00">
-
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Minimal_btrfs_subvolume_install_disko">
-  <meta name="twitter:description" content="Minimal BTRFS-Subvol Install with Disko and Flakes Why I Chose BTRFS I chose BTRFS because I was already familiar with it from using it with Arch Linux and I found it to be very easy to use. From what I’ve read, there are licensing issues between the Linux Kernel and ZFS which means that ZFS is not part of the Linux Kernel; it’s maintained by the OpenZFS project and available as a separate kernel module. This can cause issues and make you think more about your filesystem than I personally want to at this point.">
-
-    <link rel="stylesheet" href="/css/root.css">
-    <link rel="stylesheet" href="/css/bundle.css">
-
-      <script src="/js/bundle.js"></script><script defer src="/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js" integrity="sha256-ZFlLEl97eL30&#43;oMWlVkiu&#43;uxzWuu8/FmVL/KIDCfGPg="></script>
-<script defer src="/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js" integrity="sha256-HZgPhN8R8&#43;t8jF8X9UHUmgYRYI3xed10&#43;n8GIl61as4="></script>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
-
-</head>
-<body class="notransition">
-  <div id="container">
-    <header id="main-header"><div role="navigation" aria-label="Main">
-  <div class="nav-left">
-    <a href="http://localhost:1313/" style="color: inherit;">NixOS Blog</a>
-  </div>
-  <div class="nav-right">
-    <div style="position:absolute;width:0px;height:0px;">
-      <div id="nav-dropdown-menu" class="hidden" href="#">
-    <div class="nav-item">
-      <a aria-current="true" class="ancestor" href="/posts/"
-      >Posts</a>
-    </div>
-</div>
-    </div>
-    <a id="nav-dropdown-button" href="#"><svg width="20px" height="20px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-</a>
-    <div id="nav-menu">
-    <div class="nav-item">
-      <a aria-current="true" class="ancestor" href="/posts/"
-      >Posts</a>
-    </div>
-</div>
-    <a id="theme-switcher" href="#">
-<svg class="light-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M12 3V4M12 20V21M4 12H3M6.31412 6.31412L5.5 5.5M17.6859 6.31412L18.5 5.5M6.31412 17.69L5.5 18.5001M17.6859 17.69L18.5 18.5001M21 12H20M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-
-<svg class="dark-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M3.32031 11.6835C3.32031 16.6541 7.34975 20.6835 12.3203 20.6835C16.1075 20.6835 19.3483 18.3443 20.6768 15.032C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834C12.3497 15.6834 8.32031 11.654 8.32031 6.68342C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996C5.65605 4.66028 3.32031 7.89912 3.32031 11.6835Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-</a>
-  </div>
-</div>
-</header>
-    <div class="flex grow">
-      <div id="main-pane">
-        <main id="main-content"><div class="single-header">
-<ol class="breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
-    <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-      <a itemprop="item" href="http://localhost:1313/">
-        <span itemprop="name">Home</span>
-      </a>
-      <meta itemprop="position" content='1' />
-    </li>
-    <span>&nbsp»&nbsp</span>
-    <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-      <a itemprop="item" href="http://localhost:1313/posts/">
-        <span itemprop="name">Posts</span>
-      </a>
-      <meta itemprop="position" content='2' />
-    </li>
-    <span>&nbsp»&nbsp</span>
-</ol>
-<h1>Minimal_btrfs_subvolume_install_disko</h1><time class="dim" datetime="2025-06-15T18:14:54-04:00">June 15, 2025</time></div>
-  <section class="page-section"><h1 id="minimal-btrfs-subvol-install-with-disko-and-flakes">Minimal BTRFS-Subvol Install with Disko and Flakes</h1>
-<h2 id="why-i-chose-btrfs">Why I Chose BTRFS</h2>
-<p>I chose BTRFS because I was already familiar with it from using it with Arch
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Minimal_btrfs_subvolume_install_disko | NixOS Blog</title><link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://TSawyer87.github.io/posts/minimal_btrfs_subvolume_install_disko/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Minimal_btrfs_subvolume_install_disko"><meta property="og:description" content="Minimal BTRFS-Subvol Install with Disko and Flakes Why I Chose BTRFS I chose BTRFS because I was already familiar with it from using it with Arch Linux and I found it to be very easy to use. From what I’ve read, there are licensing issues between the Linux Kernel and ZFS which means that ZFS is not part of the Linux Kernel; it’s maintained by the OpenZFS project and available as a separate kernel module. This can cause issues and make you think more about your filesystem than I personally want to at this point."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-06-15T18:14:54-04:00"><meta property="article:modified_time" content="2025-06-15T18:14:54-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Minimal_btrfs_subvolume_install_disko"><meta name=twitter:description content="Minimal BTRFS-Subvol Install with Disko and Flakes Why I Chose BTRFS I chose BTRFS because I was already familiar with it from using it with Arch Linux and I found it to be very easy to use. From what I’ve read, there are licensing issues between the Linux Kernel and ZFS which means that ZFS is not part of the Linux Kernel; it’s maintained by the OpenZFS project and available as a separate kernel module. This can cause issues and make you think more about your filesystem than I personally want to at this point."><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.f27a56e991be000b70f16c1055f85c5c8a52543dd12df8dc254055463a69e878.css integrity="sha256-8npW6ZG+AAtw8WwQVfhcXIpSVD3RLfjcJUBVRjpp6Hg=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://TSawyer87.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/><span itemprop=name>Home</span>
+</a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/posts/><span itemprop=name>Posts</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Minimal_btrfs_subvolume_install_disko</h1><time class=dim datetime=2025-06-15T18:14:54-04:00>June 15, 2025</time></div><section class=page-section><h1 id=minimal-btrfs-subvol-install-with-disko-and-flakes>Minimal BTRFS-Subvol Install with Disko and Flakes</h1><h2 id=why-i-chose-btrfs>Why I Chose BTRFS</h2><p>I chose BTRFS because I was already familiar with it from using it with Arch
 Linux and I found it to be very easy to use. From what I&rsquo;ve read, there are
 licensing issues between the Linux Kernel and ZFS which means that ZFS is not
 part of the Linux Kernel; it&rsquo;s maintained by the OpenZFS project and available
 as a separate kernel module. This can cause issues and make you think more about
-your filesystem than I personally want to at this point.</p>
-<p>While ZFS is a solid choice and offers some benefits over BTRFS, I recommend
-looking into it before making your own decision.</p>
-<p>If you have a ton of RAM you could most likely skip the minimal install and just
+your filesystem than I personally want to at this point.</p><p>While ZFS is a solid choice and offers some benefits over BTRFS, I recommend
+looking into it before making your own decision.</p><p>If you have a ton of RAM you could most likely skip the minimal install and just
 set your system up as needed or just use
-<a href="https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/">tmpfs as root</a></p>
-<h2 id="getting-started-with-disko">Getting Started with Disko</h2>
-<p>Disko allows you to declaratively partition and format your disks, and then
+<a href=https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/>tmpfs as root</a></p><h2 id=getting-started-with-disko>Getting Started with Disko</h2><p>Disko allows you to declaratively partition and format your disks, and then
 mount them to your system. I recommend checking out the
 <a href="https://github.com/nix-community/disko/tree/master?tab=readme-ov-file">README</a>
-as it is a <strong>disk destroyer</strong> if used incorrectly.</p>
-<p>We will mainly be following the
-<a href="https://github.com/nix-community/disko/blob/master/docs/quickstart.md">disko quickstart guide</a></p>
-<p>Figure 2: <strong>Disko Logo</strong>: Image of the logo for Disko, the NixOS declarative
+as it is a <strong>disk destroyer</strong> if used incorrectly.</p><p>We will mainly be following the
+<a href=https://github.com/nix-community/disko/blob/master/docs/quickstart.md>disko quickstart guide</a></p><p>Figure 2: <strong>Disko Logo</strong>: Image of the logo for Disko, the NixOS declarative
 disk partitioning tool. Sourced from the
-<a href="https://github.com/nix-community/disko">Disko project</a>
-<img src="../images/disko1.png" alt="disko logo"></p>
-<ol>
-<li>
-<p>Get the
-<a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
+<a href=https://github.com/nix-community/disko>Disko project</a>
+<img src=../images/disko1.png alt="disko logo"></p><ol><li><p>Get the
+<a href=https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso>Nixos Minimal ISO</a>
 Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
 link to the
-<a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
+<a href=https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download>Ventoy TarBall</a>
 download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
 executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
-<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p>
-</li>
-<li>
-<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
-enable networking run the following:</p>
-</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo systemctl start wpa_supplicant
-</span></span><span style="display:flex;"><span>wpa_cli
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; add_network
-</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>&gt; set_network <span style="color:#ae81ff">0</span> ssid <span style="color:#e6db74">&#34;myhomenetwork&#34;</span>
-</span></span><span style="display:flex;"><span>OK
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>&gt; set_network <span style="color:#ae81ff">0</span> psk <span style="color:#e6db74">&#34;mypassword&#34;</span>
-</span></span><span style="display:flex;"><span>OK
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>&gt; enable_network <span style="color:#ae81ff">0</span>
-</span></span><span style="display:flex;"><span>OK
-</span></span></code></pre></div><p>To exit type <code>quit</code>, then check your connection with <code>ping google.com</code>.</p>
-<p>Another option is to do the following, so either the above method or the below
-method after starting <code>wpa_supplicant</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Alternative for quick setup (less interactive, but often faster)</span>
-</span></span><span style="display:flex;"><span>sudo wpa_passphrase <span style="color:#e6db74">&#34;myhomenetwork&#34;</span> <span style="color:#e6db74">&#34;mypassword&#34;</span> &gt;&gt; /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
-</span></span><span style="display:flex;"><span>sudo systemctl restart wpa_supplicant@wlan0.service
-</span></span></code></pre></div><ol start="3">
-<li>Get your Disk Name with <code>lsblk</code></li>
-</ol>
-<p>The output should be something like:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-</span></span><span style="display:flex;"><span>nvme0n1     259:0    <span style="color:#ae81ff">0</span>   1,8T  <span style="color:#ae81ff">0</span> disk
-</span></span></code></pre></div><ol start="4">
-<li>Copy the disk configuration to your machine. You can choose one from the
-<a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.
-I chose the btrfs-subvolumes layout so I ran the following:</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd /tmp
-</span></span><span style="display:flex;"><span>curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/btrfs-subvolumes.nix -o /tmp/disk-config.nix
-</span></span></code></pre></div><ol start="5">
-<li>Make Necessary changes, I set mine up for impermanence with the following:</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nano /tmp/disk-config.nix
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  disko<span style="color:#f92672">.</span>devices <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>    disk <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>      main <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>        type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;disk&#34;</span>;
-</span></span><span style="display:flex;"><span>        device <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/dev/nvme0n1&#34;</span>;
-</span></span><span style="display:flex;"><span>        content <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>          type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gpt&#34;</span>;
-</span></span><span style="display:flex;"><span>          partitions <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>            ESP <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>              priority <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>              name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ESP&#34;</span>;
-</span></span><span style="display:flex;"><span>              start <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1M&#34;</span>;
-</span></span><span style="display:flex;"><span>              end <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;512M&#34;</span>;
-</span></span><span style="display:flex;"><span>              type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;EF00&#34;</span>;
-</span></span><span style="display:flex;"><span>              content <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;filesystem&#34;</span>;
-</span></span><span style="display:flex;"><span>                format <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;vfat&#34;</span>;
-</span></span><span style="display:flex;"><span>                mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/boot&#34;</span>;
-</span></span><span style="display:flex;"><span>                mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;umask=0077&#34;</span>];
-</span></span><span style="display:flex;"><span>              };
-</span></span><span style="display:flex;"><span>            };
-</span></span><span style="display:flex;"><span>            root <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>              size <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;100%&#34;</span>;
-</span></span><span style="display:flex;"><span>              content <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;btrfs&#34;</span>;
-</span></span><span style="display:flex;"><span>                extraArgs <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;-f&#34;</span>]; <span style="color:#75715e"># Override existing partition</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># Subvolumes must set a mountpoint in order to be mounted,</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># unless their parent is mounted</span>
-</span></span><span style="display:flex;"><span>                subvolumes <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                  <span style="color:#75715e"># Subvolume name is different from mountpoint</span>
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/root&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                    mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/&#34;</span>;
-</span></span><span style="display:flex;"><span>                    mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;subvol=root&#34;</span> <span style="color:#e6db74">&#34;compress=zstd&#34;</span> <span style="color:#e6db74">&#34;noatime&#34;</span>];
-</span></span><span style="display:flex;"><span>                  };
-</span></span><span style="display:flex;"><span>                  <span style="color:#75715e"># Subvolume name is the same as the mountpoint</span>
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/home&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                    mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;subvol=home&#34;</span> <span style="color:#e6db74">&#34;compress=zstd&#34;</span> <span style="color:#e6db74">&#34;noatime&#34;</span>];
-</span></span><span style="display:flex;"><span>                    mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/home&#34;</span>;
-</span></span><span style="display:flex;"><span>                  };
-</span></span><span style="display:flex;"><span>                  <span style="color:#75715e"># Sub(sub)volume doesn&#39;t need a mountpoint as its parent is mounted</span>
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/home/user&#34;</span> <span style="color:#f92672">=</span> {};
-</span></span><span style="display:flex;"><span>                  <span style="color:#75715e"># Parent is not mounted so the mountpoint must be set</span>
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/nix&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                    mountOptions <span style="color:#f92672">=</span> [
-</span></span><span style="display:flex;"><span>                      <span style="color:#e6db74">&#34;subvol=nix&#34;</span>
-</span></span><span style="display:flex;"><span>                      <span style="color:#e6db74">&#34;compress=zstd&#34;</span>
-</span></span><span style="display:flex;"><span>                      <span style="color:#e6db74">&#34;noatime&#34;</span>
-</span></span><span style="display:flex;"><span>                    ];
-</span></span><span style="display:flex;"><span>                    mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/nix&#34;</span>;
-</span></span><span style="display:flex;"><span>                  };
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/persist&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                    mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/persist&#34;</span>;
-</span></span><span style="display:flex;"><span>                    mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;subvol=persist&#34;</span> <span style="color:#e6db74">&#34;compress=zstd&#34;</span> <span style="color:#e6db74">&#34;noatime&#34;</span>];
-</span></span><span style="display:flex;"><span>                  };
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/log&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                    mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/var/log&#34;</span>;
-</span></span><span style="display:flex;"><span>                    mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;subvol=log&#34;</span> <span style="color:#e6db74">&#34;compress=zstd&#34;</span> <span style="color:#e6db74">&#34;noatime&#34;</span>];
-</span></span><span style="display:flex;"><span>                  };
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/lib&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>                    mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/var/lib&#34;</span>;
-</span></span><span style="display:flex;"><span>                    mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;subvol=lib&#34;</span> <span style="color:#e6db74">&#34;compress=zstd&#34;</span> <span style="color:#e6db74">&#34;noatime&#34;</span>];
-</span></span><span style="display:flex;"><span>                  };
-</span></span><span style="display:flex;"><span>                  <span style="color:#75715e"># This subvolume will be created but not mounted</span>
-</span></span><span style="display:flex;"><span>                  <span style="color:#e6db74">&#34;/test&#34;</span> <span style="color:#f92672">=</span> {};
-</span></span><span style="display:flex;"><span>                };
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>              };
-</span></span><span style="display:flex;"><span>            };
-</span></span><span style="display:flex;"><span>          };
-</span></span><span style="display:flex;"><span>        };
-</span></span><span style="display:flex;"><span>      };
-</span></span><span style="display:flex;"><span>    };
-</span></span><span style="display:flex;"><span>  };
-</span></span><span style="display:flex;"><span>  fileSystems<span style="color:#f92672">.</span><span style="color:#e6db74">&#34;/persist&#34;</span><span style="color:#f92672">.</span>neededForBoot <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>  fileSystems<span style="color:#f92672">.</span><span style="color:#e6db74">&#34;/var/log&#34;</span><span style="color:#f92672">.</span>neededForBoot <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>  fileSystems<span style="color:#f92672">.</span><span style="color:#e6db74">&#34;/var/lib&#34;</span><span style="color:#f92672">.</span>neededForBoot <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><ul>
-<li>You may choose to add a swapfile to the above <code>disk-config.nix</code>, I haven&rsquo;t
+<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p></li><li><p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
+enable networking run the following:</p></li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo systemctl start wpa_supplicant
+</span></span><span style=display:flex><span>wpa_cli
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; add_network
+</span></span><span style=display:flex><span><span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&gt; set_network <span style=color:#ae81ff>0</span> ssid <span style=color:#e6db74>&#34;myhomenetwork&#34;</span>
+</span></span><span style=display:flex><span>OK
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&gt; set_network <span style=color:#ae81ff>0</span> psk <span style=color:#e6db74>&#34;mypassword&#34;</span>
+</span></span><span style=display:flex><span>OK
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&gt; enable_network <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>OK
+</span></span></code></pre></div><p>To exit type <code>quit</code>, then check your connection with <code>ping google.com</code>.</p><p>Another option is to do the following, so either the above method or the below
+method after starting <code>wpa_supplicant</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Alternative for quick setup (less interactive, but often faster)</span>
+</span></span><span style=display:flex><span>sudo wpa_passphrase <span style=color:#e6db74>&#34;myhomenetwork&#34;</span> <span style=color:#e6db74>&#34;mypassword&#34;</span> &gt;&gt; /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+</span></span><span style=display:flex><span>sudo systemctl restart wpa_supplicant@wlan0.service
+</span></span></code></pre></div><ol start=3><li>Get your Disk Name with <code>lsblk</code></li></ol><p>The output should be something like:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+</span></span><span style=display:flex><span>nvme0n1     259:0    <span style=color:#ae81ff>0</span>   1,8T  <span style=color:#ae81ff>0</span> disk
+</span></span></code></pre></div><ol start=4><li>Copy the disk configuration to your machine. You can choose one from the
+<a href=https://github.com/nix-community/disko/tree/master/example>examples directory</a>.
+I chose the btrfs-subvolumes layout so I ran the following:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cd /tmp
+</span></span><span style=display:flex><span>curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/btrfs-subvolumes.nix -o /tmp/disk-config.nix
+</span></span></code></pre></div><ol start=5><li>Make Necessary changes, I set mine up for impermanence with the following:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nano /tmp/disk-config.nix
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  disko<span style=color:#f92672>.</span>devices <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    disk <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      main <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;disk&#34;</span>;
+</span></span><span style=display:flex><span>        device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/dev/nvme0n1&#34;</span>;
+</span></span><span style=display:flex><span>        content <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;gpt&#34;</span>;
+</span></span><span style=display:flex><span>          partitions <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>            ESP <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>              priority <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>              name <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;ESP&#34;</span>;
+</span></span><span style=display:flex><span>              start <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;1M&#34;</span>;
+</span></span><span style=display:flex><span>              end <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;512M&#34;</span>;
+</span></span><span style=display:flex><span>              type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;EF00&#34;</span>;
+</span></span><span style=display:flex><span>              content <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;filesystem&#34;</span>;
+</span></span><span style=display:flex><span>                format <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;vfat&#34;</span>;
+</span></span><span style=display:flex><span>                mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/boot&#34;</span>;
+</span></span><span style=display:flex><span>                mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;umask=0077&#34;</span>];
+</span></span><span style=display:flex><span>              };
+</span></span><span style=display:flex><span>            };
+</span></span><span style=display:flex><span>            root <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>              size <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;100%&#34;</span>;
+</span></span><span style=display:flex><span>              content <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;btrfs&#34;</span>;
+</span></span><span style=display:flex><span>                extraArgs <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;-f&#34;</span>]; <span style=color:#75715e># Override existing partition</span>
+</span></span><span style=display:flex><span>                <span style=color:#75715e># Subvolumes must set a mountpoint in order to be mounted,</span>
+</span></span><span style=display:flex><span>                <span style=color:#75715e># unless their parent is mounted</span>
+</span></span><span style=display:flex><span>                subvolumes <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                  <span style=color:#75715e># Subvolume name is different from mountpoint</span>
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/root&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                    mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/&#34;</span>;
+</span></span><span style=display:flex><span>                    mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;subvol=root&#34;</span> <span style=color:#e6db74>&#34;compress=zstd&#34;</span> <span style=color:#e6db74>&#34;noatime&#34;</span>];
+</span></span><span style=display:flex><span>                  };
+</span></span><span style=display:flex><span>                  <span style=color:#75715e># Subvolume name is the same as the mountpoint</span>
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/home&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                    mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;subvol=home&#34;</span> <span style=color:#e6db74>&#34;compress=zstd&#34;</span> <span style=color:#e6db74>&#34;noatime&#34;</span>];
+</span></span><span style=display:flex><span>                    mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/home&#34;</span>;
+</span></span><span style=display:flex><span>                  };
+</span></span><span style=display:flex><span>                  <span style=color:#75715e># Sub(sub)volume doesn&#39;t need a mountpoint as its parent is mounted</span>
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/home/user&#34;</span> <span style=color:#f92672>=</span> {};
+</span></span><span style=display:flex><span>                  <span style=color:#75715e># Parent is not mounted so the mountpoint must be set</span>
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/nix&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                    mountOptions <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>                      <span style=color:#e6db74>&#34;subvol=nix&#34;</span>
+</span></span><span style=display:flex><span>                      <span style=color:#e6db74>&#34;compress=zstd&#34;</span>
+</span></span><span style=display:flex><span>                      <span style=color:#e6db74>&#34;noatime&#34;</span>
+</span></span><span style=display:flex><span>                    ];
+</span></span><span style=display:flex><span>                    mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/nix&#34;</span>;
+</span></span><span style=display:flex><span>                  };
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/persist&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                    mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/persist&#34;</span>;
+</span></span><span style=display:flex><span>                    mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;subvol=persist&#34;</span> <span style=color:#e6db74>&#34;compress=zstd&#34;</span> <span style=color:#e6db74>&#34;noatime&#34;</span>];
+</span></span><span style=display:flex><span>                  };
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/log&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                    mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/var/log&#34;</span>;
+</span></span><span style=display:flex><span>                    mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;subvol=log&#34;</span> <span style=color:#e6db74>&#34;compress=zstd&#34;</span> <span style=color:#e6db74>&#34;noatime&#34;</span>];
+</span></span><span style=display:flex><span>                  };
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/lib&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                    mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/var/lib&#34;</span>;
+</span></span><span style=display:flex><span>                    mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;subvol=lib&#34;</span> <span style=color:#e6db74>&#34;compress=zstd&#34;</span> <span style=color:#e6db74>&#34;noatime&#34;</span>];
+</span></span><span style=display:flex><span>                  };
+</span></span><span style=display:flex><span>                  <span style=color:#75715e># This subvolume will be created but not mounted</span>
+</span></span><span style=display:flex><span>                  <span style=color:#e6db74>&#34;/test&#34;</span> <span style=color:#f92672>=</span> {};
+</span></span><span style=display:flex><span>                };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>              };
+</span></span><span style=display:flex><span>            };
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>  fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/persist&#34;</span><span style=color:#f92672>.</span>neededForBoot <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>  fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/var/log&#34;</span><span style=color:#f92672>.</span>neededForBoot <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>  fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/var/lib&#34;</span><span style=color:#f92672>.</span>neededForBoot <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li>You may choose to add a swapfile to the above <code>disk-config.nix</code>, I haven&rsquo;t
 included it here because I manage it with the impermanence module. If you were
-to add it here you could just add under say the <code>&quot;/lib&quot;</code> section add:</li>
-</ul>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#75715e"># Persistent subvolume for swapfile</span>
-</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;/persist/swap&#34;</span> <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>  mountpoint <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/persist/swap&#34;</span>;
-</span></span><span style="display:flex;"><span>  mountOptions <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;subvol=persist/swap&#34;</span> <span style="color:#e6db74">&#34;noatime&#34;</span>]; <span style="color:#75715e"># No compression for swap</span>
-</span></span><span style="display:flex;"><span>};
-</span></span><span style="display:flex;"><span>fileSystems<span style="color:#f92672">.</span><span style="color:#e6db74">&#34;/persist/swap&#34;</span><span style="color:#f92672">.</span>neededForBoot <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span></code></pre></div><ol start="6">
-<li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
-wipe <strong>EVERYTHING</strong> on your disk. Disko doesn&rsquo;t work with dual boot.</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo nix --experimental-features <span style="color:#e6db74">&#34;nix-command flakes&#34;</span> run github:nix-community/disko/latest -- --mode destroy,format,mount /tmp/disk-config.nix
-</span></span></code></pre></div><p>Check it with the following:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mount | grep /mnt
-</span></span></code></pre></div><p>The output for an <code>nvme0n1</code> disk would be similar to the following:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#... snip ...</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt type btrfs <span style="color:#f92672">(</span>rw,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>285,subvol<span style="color:#f92672">=</span>/root<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt/persist type btrfs <span style="color:#f92672">(</span>rw,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>261,subvol<span style="color:#f92672">=</span>/persist<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt/etc type btrfs <span style="color:#f92672">(</span>rw,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>261,subvol<span style="color:#f92672">=</span>/persist<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt/nix type btrfs <span style="color:#f92672">(</span>rw,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>260,subvol<span style="color:#f92672">=</span>/nix<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt/var/lib type btrfs <span style="color:#f92672">(</span>rw,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>258,subvol<span style="color:#f92672">=</span>/lib<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt/var/log type btrfs <span style="color:#f92672">(</span>rw,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>259,subvol<span style="color:#f92672">=</span>/log<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /mnt/nix/store type btrfs <span style="color:#f92672">(</span>ro,noatime,compress<span style="color:#f92672">=</span>zstd:3,ssd,discard<span style="color:#f92672">=</span>async,space_cache<span style="color:#f92672">=</span>v2,subvolid<span style="color:#f92672">=</span>260,subvol<span style="color:#f92672">=</span>/nix<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># ... snip ...</span>
-</span></span></code></pre></div><ol start="7">
-<li>Generate necessary files, here we use <code>--no-filesystems</code> because disko
-handles the <code>fileSystems</code> attribute for us.</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nixos-generate-config --no-filesystems --root /mnt
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo mv /tmp/disk-config.nix /mnt/etc/nixos
-</span></span></code></pre></div><h3 id="setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</h3>
-<ol start="8">
-<li>Create the flake in your home directory, then move it to <code>/mnt/etc/nixos</code></li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir flake <span style="color:#f92672">&amp;&amp;</span> cd flake
-</span></span><span style="display:flex;"><span>nix-shell -p git yazi helix
-</span></span><span style="display:flex;"><span>export NIX_CONFIG<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;experimental-features = nix-command flakes&#39;</span>
-</span></span><span style="display:flex;"><span>export EDITOR<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;hx&#39;</span>
-</span></span><span style="display:flex;"><span>hx flake.nix
-</span></span></code></pre></div><blockquote>
-<p>You&rsquo;ll change <code>hostname = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
+to add it here you could just add under say the <code>"/lib"</code> section add:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># Persistent subvolume for swapfile</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/persist/swap&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>  mountpoint <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/persist/swap&#34;</span>;
+</span></span><span style=display:flex><span>  mountOptions <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;subvol=persist/swap&#34;</span> <span style=color:#e6db74>&#34;noatime&#34;</span>]; <span style=color:#75715e># No compression for swap</span>
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span>fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/persist/swap&#34;</span><span style=color:#f92672>.</span>neededForBoot <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span></code></pre></div><ol start=6><li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
+wipe <strong>EVERYTHING</strong> on your disk. Disko doesn&rsquo;t work with dual boot.</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo nix --experimental-features <span style=color:#e6db74>&#34;nix-command flakes&#34;</span> run github:nix-community/disko/latest -- --mode destroy,format,mount /tmp/disk-config.nix
+</span></span></code></pre></div><p>Check it with the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mount | grep /mnt
+</span></span></code></pre></div><p>The output for an <code>nvme0n1</code> disk would be similar to the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e>#... snip ...</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt type btrfs <span style=color:#f92672>(</span>rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>285,subvol<span style=color:#f92672>=</span>/root<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt/persist type btrfs <span style=color:#f92672>(</span>rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>261,subvol<span style=color:#f92672>=</span>/persist<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt/etc type btrfs <span style=color:#f92672>(</span>rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>261,subvol<span style=color:#f92672>=</span>/persist<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt/nix type btrfs <span style=color:#f92672>(</span>rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>260,subvol<span style=color:#f92672>=</span>/nix<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt/var/lib type btrfs <span style=color:#f92672>(</span>rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>258,subvol<span style=color:#f92672>=</span>/lib<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt/var/log type btrfs <span style=color:#f92672>(</span>rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>259,subvol<span style=color:#f92672>=</span>/log<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>/dev/nvme0n1p2 on /mnt/nix/store type btrfs <span style=color:#f92672>(</span>ro,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>260,subvol<span style=color:#f92672>=</span>/nix<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># ... snip ...</span>
+</span></span></code></pre></div><ol start=7><li>Generate necessary files, here we use <code>--no-filesystems</code> because disko
+handles the <code>fileSystems</code> attribute for us.</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nixos-generate-config --no-filesystems --root /mnt
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo mv /tmp/disk-config.nix /mnt/etc/nixos
+</span></span></code></pre></div><h3 id=setting-a-flake-for-your-minimal-install>Setting a Flake for your minimal Install</h3><ol start=8><li>Create the flake in your home directory, then move it to <code>/mnt/etc/nixos</code></li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mkdir flake <span style=color:#f92672>&amp;&amp;</span> cd flake
+</span></span><span style=display:flex><span>nix-shell -p git yazi helix
+</span></span><span style=display:flex><span>export NIX_CONFIG<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;experimental-features = nix-command flakes&#39;</span>
+</span></span><span style=display:flex><span>export EDITOR<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;hx&#39;</span>
+</span></span><span style=display:flex><span>hx flake.nix
+</span></span></code></pre></div><blockquote><p>You&rsquo;ll change <code>hostname = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
 (e.g. <code>magic = nixpkgs.lib.nixosSystem</code>). This will be the same as your
-<code>networking.hostName = &quot;magic&quot;;</code> in your <code>configuration.nix</code> that we will set
-up shortly.</p></blockquote>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#75715e"># flake.nix</span>
-</span></span><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  description <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;NixOS configuration&#34;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  inputs <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>    nixpkgs<span style="color:#f92672">.</span>url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
-</span></span><span style="display:flex;"><span>    disko<span style="color:#f92672">.</span>url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;github:nix-community/disko/latest&#34;</span>;
-</span></span><span style="display:flex;"><span>    disko<span style="color:#f92672">.</span>inputs<span style="color:#f92672">.</span>nixpkgs<span style="color:#f92672">.</span>follows <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nixpkgs&#34;</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># impermanence.url = &#34;github:nix-community/impermanence&#34;;</span>
-</span></span><span style="display:flex;"><span>  };
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  outputs <span style="color:#f92672">=</span> inputs<span style="color:#f92672">@</span>{ nixpkgs<span style="color:#f92672">,</span> <span style="color:#f92672">...</span> }: {
-</span></span><span style="display:flex;"><span>    nixosConfigurations <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>      hostname <span style="color:#f92672">=</span> nixpkgs<span style="color:#f92672">.</span>lib<span style="color:#f92672">.</span>nixosSystem {
-</span></span><span style="display:flex;"><span>        system <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;x86_64-linux&#34;</span>;
-</span></span><span style="display:flex;"><span>        modules <span style="color:#f92672">=</span> [
-</span></span><span style="display:flex;"><span>          <span style="color:#e6db74">./configuration.nix</span>
-</span></span><span style="display:flex;"><span>          inputs<span style="color:#f92672">.</span>disko<span style="color:#f92672">.</span>nixosModules<span style="color:#f92672">.</span>disko
-</span></span><span style="display:flex;"><span>          <span style="color:#75715e"># inputs.impermanence.nixosModules.impermanence</span>
-</span></span><span style="display:flex;"><span>        ];
-</span></span><span style="display:flex;"><span>      };
-</span></span><span style="display:flex;"><span>    };
-</span></span><span style="display:flex;"><span>  };
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>Move all the files into your flake:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd /mnt/etc/nixos/
-</span></span><span style="display:flex;"><span>sudo mv disk-config.nix hardware-configuration.nix configuration.nix ~/flake
-</span></span></code></pre></div><ol start="9">
-<li>Edit <code>configuration.nix</code> with what is required, the following is required, I
+<code>networking.hostName = "magic";</code> in your <code>configuration.nix</code> that we will set
+up shortly.</p></blockquote><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;NixOS configuration&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  inputs <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    nixpkgs<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style=display:flex><span>    disko<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nix-community/disko/latest&#34;</span>;
+</span></span><span style=display:flex><span>    disko<span style=color:#f92672>.</span>inputs<span style=color:#f92672>.</span>nixpkgs<span style=color:#f92672>.</span>follows <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;nixpkgs&#34;</span>;
+</span></span><span style=display:flex><span>    <span style=color:#75715e># impermanence.url = &#34;github:nix-community/impermanence&#34;;</span>
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  outputs <span style=color:#f92672>=</span> inputs<span style=color:#f92672>@</span>{ nixpkgs<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: {
+</span></span><span style=display:flex><span>    nixosConfigurations <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      hostname <span style=color:#f92672>=</span> nixpkgs<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>nixosSystem {
+</span></span><span style=display:flex><span>        system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>;
+</span></span><span style=display:flex><span>        modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>          <span style=color:#e6db74>./configuration.nix</span>
+</span></span><span style=display:flex><span>          inputs<span style=color:#f92672>.</span>disko<span style=color:#f92672>.</span>nixosModules<span style=color:#f92672>.</span>disko
+</span></span><span style=display:flex><span>          <span style=color:#75715e># inputs.impermanence.nixosModules.impermanence</span>
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Move all the files into your flake:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cd /mnt/etc/nixos/
+</span></span><span style=display:flex><span>sudo mv disk-config.nix hardware-configuration.nix configuration.nix ~/flake
+</span></span></code></pre></div><ol start=9><li>Edit <code>configuration.nix</code> with what is required, the following is required, I
 clone my original flake repo and move the pieces into place but it&rsquo;s fairly
-easy to just type it all out:</li>
-</ol>
-<ul>
-<li>
-<p>Bootloader</p>
-</li>
-<li>
-<p>User, the example uses <code>username</code> change this to your chosen username. If you
-don&rsquo;t set your hostname it will be <code>nixos</code>.</p>
-</li>
-<li>
-<p>Networking</p>
-</li>
-<li>
-<p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
-</li>
-<li>
-<p><code>initialHashedPassword</code>: Run <code>mkpasswd -m SHA-512 -s</code>, then enter your desired
-password. Example output,</p>
-</li>
-</ul>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>Password: your_secret_password
-</span></span><span style="display:flex;"><span>Retype password: your_secret_password
-</span></span><span style="display:flex;"><span>$6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
+easy to just type it all out:</li></ol><ul><li><p>Bootloader</p></li><li><p>User, the example uses <code>username</code> change this to your chosen username. If you
+don&rsquo;t set your hostname it will be <code>nixos</code>.</p></li><li><p>Networking</p></li><li><p><code>hardware-configuration.nix</code> & <code>disk-config.nix</code> for this setup</p></li><li><p><code>initialHashedPassword</code>: Run <code>mkpasswd -m SHA-512 -s</code>, then enter your desired
+password. Example output,</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Password: your_secret_password
+</span></span><span style=display:flex><span>Retype password: your_secret_password
+</span></span><span style=display:flex><span>$6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
 </span></span></code></pre></div><p>copy the hashed password and use it for the value of your
-<code>initialHashedPassword</code></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#75715e"># configuration.nix</span>
-</span></span><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  config<span style="color:#f92672">,</span>
-</span></span><span style="display:flex;"><span>  lib<span style="color:#f92672">,</span>
-</span></span><span style="display:flex;"><span>  pkgs<span style="color:#f92672">,</span>
-</span></span><span style="display:flex;"><span>  inputs<span style="color:#f92672">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#f92672">...</span>
-</span></span><span style="display:flex;"><span>}: {
-</span></span><span style="display:flex;"><span>  imports <span style="color:#f92672">=</span> [
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Include the results of the hardware scan.</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./hardware-configuration.nix</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">./disk-config.nix</span>
-</span></span><span style="display:flex;"><span>  ];
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  networking<span style="color:#f92672">.</span>hostName <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;magic&#34;</span>; <span style="color:#75715e"># This will match the `hostname` of your flake</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  networking<span style="color:#f92672">.</span>networkmanager<span style="color:#f92672">.</span>enable <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  boot<span style="color:#f92672">.</span>loader<span style="color:#f92672">.</span>systemd-boot<span style="color:#f92672">.</span>enable <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>; <span style="color:#75715e"># (for UEFI systems only)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># List packages installed in system profile.</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># You can use https://search.nixos.org/ to find more packages (and options).</span>
-</span></span><span style="display:flex;"><span>  environment<span style="color:#f92672">.</span>systemPackages <span style="color:#f92672">=</span> <span style="color:#66d9ef">with</span> pkgs; [
-</span></span><span style="display:flex;"><span>    vim <span style="color:#75715e"># Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#   wget</span>
-</span></span><span style="display:flex;"><span>    git
-</span></span><span style="display:flex;"><span>  ];
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  time<span style="color:#f92672">.</span>timeZone <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;America/New_York&#34;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  users<span style="color:#f92672">.</span>users<span style="color:#f92672">.</span>nixos <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>    isNormalUser <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>    extraGroups <span style="color:#f92672">=</span> [ <span style="color:#e6db74">&#34;wheel&#34;</span> <span style="color:#e6db74">&#34;networkmanager&#34;</span> ]; <span style="color:#75715e"># Add &#34;wheel&#34; for sudo access</span>
-</span></span><span style="display:flex;"><span>    initialHashedPassword <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;COPY_YOUR_MKPASSWD_OUTPUT_HERE&#34;</span>; <span style="color:#75715e"># &lt;-- This is where it goes!</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># home = &#34;/home/nixos&#34;; # Optional: Disko typically handles home subvolumes</span>
-</span></span><span style="display:flex;"><span>  };
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  console<span style="color:#f92672">.</span>keyMap <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;us&#34;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  nixpkgs<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>allowUnfree <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  system<span style="color:#f92672">.</span>stateVersion <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;25.05&#34;</span>;
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><ol start="10">
-<li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo mv ~/flake /mnt/etc/nixos/
-</span></span><span style="display:flex;"><span>sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
-</span></span></code></pre></div><ul>
-<li>
-<p>You will be prompted to enter a new password if everything succeeds.</p>
-</li>
-<li>
-<p>If everything checks out, reboot the system and you should be prompted to
-enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
-</li>
-<li>
-<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
+<code>initialHashedPassword</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># configuration.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  inputs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: {
+</span></span><span style=display:flex><span>  imports <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Include the results of the hardware scan.</span>
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>./hardware-configuration.nix</span>
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>./disk-config.nix</span>
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  networking<span style=color:#f92672>.</span>hostName <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;magic&#34;</span>; <span style=color:#75715e># This will match the `hostname` of your flake</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  networking<span style=color:#f92672>.</span>networkmanager<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  boot<span style=color:#f92672>.</span>loader<span style=color:#f92672>.</span>systemd-boot<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>; <span style=color:#75715e># (for UEFI systems only)</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># List packages installed in system profile.</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># You can use https://search.nixos.org/ to find more packages (and options).</span>
+</span></span><span style=display:flex><span>  environment<span style=color:#f92672>.</span>systemPackages <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> pkgs; [
+</span></span><span style=display:flex><span>    vim <span style=color:#75715e># Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>#   wget</span>
+</span></span><span style=display:flex><span>    git
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  time<span style=color:#f92672>.</span>timeZone <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;America/New_York&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  users<span style=color:#f92672>.</span>users<span style=color:#f92672>.</span>nixos <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    isNormalUser <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>    extraGroups <span style=color:#f92672>=</span> [ <span style=color:#e6db74>&#34;wheel&#34;</span> <span style=color:#e6db74>&#34;networkmanager&#34;</span> ]; <span style=color:#75715e># Add &#34;wheel&#34; for sudo access</span>
+</span></span><span style=display:flex><span>    initialHashedPassword <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;COPY_YOUR_MKPASSWD_OUTPUT_HERE&#34;</span>; <span style=color:#75715e># &lt;-- This is where it goes!</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># home = &#34;/home/nixos&#34;; # Optional: Disko typically handles home subvolumes</span>
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  console<span style=color:#f92672>.</span>keyMap <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;us&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  nixpkgs<span style=color:#f92672>.</span>config<span style=color:#f92672>.</span>allowUnfree <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  system<span style=color:#f92672>.</span>stateVersion <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;25.05&#34;</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ol start=10><li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo mv ~/flake /mnt/etc/nixos/
+</span></span><span style=display:flex><span>sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
+</span></span></code></pre></div><ul><li><p>You will be prompted to enter a new password if everything succeeds.</p></li><li><p>If everything checks out, reboot the system and you should be prompted to
+enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p></li><li><p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
 directory. Since the file was first in <code>/etc</code> you&rsquo;ll need to adjust the
 permissions with something like <code>sudo chown username:users ~/flake</code>(<code>username</code>
 will be your username) and then you can work on it without privilege
-escalation.</p>
-</li>
-<li>
-<p>To continue following along and set up impermanence
-<a href="https://saylesss88.github.io/nix/impermanence.html">Click Here</a></p>
-</li>
-</ul>
-</section></main>
-        <footer id="main-footer"><div class="footer">
-  <a href="#">Scroll to Top</a>
-  <div class="footer-copyright">
-    <div class="dim">© 2025 </div>
-    <div>Made with ❤️ and powered by <a href="https://github.com/math-queiroz/rusty-typewriter" target="_blank">Rusty Typewriter</a> theme for <a href="https://gohugo.io/" target="_blank">Hugo</a></div>
-  </div>
-</div>
-</footer>
-      </div><aside id="side-pane" class="side-sticky"><div class="side-details">
-    <span>1354 words</span>
-    <span>11 - 14 minutes read</span></div><h3>Table Of Contents</h3><nav id="TableOfContents">
-  <ul>
-    <li><a href="#why-i-chose-btrfs">Why I Chose BTRFS</a></li>
-    <li><a href="#getting-started-with-disko">Getting Started with Disko</a>
-      <ul>
-        <li><a href="#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav></aside></div>
-  </div>
-</body>
-</html>
+escalation.</p></li><li><p>To continue following along and set up impermanence
+<a href=https://saylesss88.github.io/nix/impermanence.html>Click Here</a></p></li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>1354 words</span>
+<span>11 - 14 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#why-i-chose-btrfs>Why I Chose BTRFS</a></li><li><a href=#getting-started-with-disko>Getting Started with Disko</a><ul><li><a href=#setting-a-flake-for-your-minimal-install>Setting a Flake for your minimal Install</a></li></ul></li></ul></nav></aside></div></div></body></html>

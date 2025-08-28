@@ -1,0 +1,164 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Btrfs_impermanence | NixOS Blog</title><link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://TSawyer87.github.io/posts/btrfs_impermanence/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Btrfs_impermanence"><meta property="og:description" content="Unencrypted BTRFS Impermanence with Flakes Figure 1: Impermanence Logo: Image of the Impermanence logo. Sourced from the
+This guide is for an unencrypted setup, there are a few links at the end for encrypted setups. This guide follows the previous minimal install guide but you should be able to adjust it carefully to meet your needs.
+This section details how to set up impermanence on your NixOS system using BTRFS subvolumes. With impermanence, your operating system’s root filesystem will reset to a pristine state on each reboot, while designated directories and files remain persistent. This provides a highly reliable and rollback-friendly system."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-06-15T18:15:13-04:00"><meta property="article:modified_time" content="2025-06-15T18:15:13-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Btrfs_impermanence"><meta name=twitter:description content="Unencrypted BTRFS Impermanence with Flakes Figure 1: Impermanence Logo: Image of the Impermanence logo. Sourced from the
+This guide is for an unencrypted setup, there are a few links at the end for encrypted setups. This guide follows the previous minimal install guide but you should be able to adjust it carefully to meet your needs.
+This section details how to set up impermanence on your NixOS system using BTRFS subvolumes. With impermanence, your operating system’s root filesystem will reset to a pristine state on each reboot, while designated directories and files remain persistent. This provides a highly reliable and rollback-friendly system."><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.f27a56e991be000b70f16c1055f85c5c8a52543dd12df8dc254055463a69e878.css integrity="sha256-8npW6ZG+AAtw8WwQVfhcXIpSVD3RLfjcJUBVRjpp6Hg=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://TSawyer87.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/><span itemprop=name>Home</span>
+</a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/posts/><span itemprop=name>Posts</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Btrfs_impermanence</h1><time class=dim datetime=2025-06-15T18:15:13-04:00>June 15, 2025</time></div><section class=page-section><h1 id=unencrypted-btrfs-impermanence-with-flakes>Unencrypted BTRFS Impermanence with Flakes</h1><p>Figure 1: <strong>Impermanence Logo</strong>: Image of the Impermanence logo. Sourced from
+the</p><p>This guide is for an unencrypted setup, there are a few links at the end for
+encrypted setups. This guide follows the previous
+<a href=https://saylesss88.github.io/nix/impermanence.html>minimal install guide</a> but
+you should be able to adjust it carefully to meet your needs.</p><p>This section details how to set up impermanence on your NixOS system using BTRFS
+subvolumes. With impermanence, your operating system&rsquo;s root filesystem will
+reset to a pristine state on each reboot, while designated directories and files
+remain persistent. This provides a highly reliable and rollback-friendly system.</p><h2 id=impermanence-the-concept-and-its-btrfs-implementation>Impermanence: The Concept and Its BTRFS Implementation</h2><p>In a traditional Linux system, most of this state is stored on the disk and
+persists indefinitely unless manually deleted or modified. However, this can
+lead to configuration drift, where the system accumulates changes (e.g., log
+files, temporary files, or unintended configuration tweaks) that make it harder
+to reproduce or maintain.</p><p>Impermanence, in the context of operating systems, refers to a setup where the
+majority of the system&rsquo;s root filesystem (<code>/</code>) is reset to a pristine state on
+every reboot. This means any changes made to the system (e.g., installing new
+packages, modifying system files outside of configuration management, creating
+temporary files) are discarded upon shutdown or reboot.</p><h3 id=what-does-impermanence-do>What Does Impermanence Do?</h3><p>Impermanence is a NixOS approach that makes the system stateless (or nearly
+stateless) by wiping the root filesystem (<code>/</code>) on each boot, ensuring a clean,
+predictable starting point. Only explicitly designated data (persistent state)
+is preserved across reboots, typically stored in specific locations like the
+<code>/persist</code> subvolume. This achieves:</p><ol><li>Clean Root Filesystem:</li></ol><ul><li><p>The root subvolume is deleted and recreated on each boot, erasing transient
+state (e.g., temporary files, runtime data).</p></li><li><p>This ensures the system starts fresh, reducing clutter and making it behave
+closer to a declarative system defined by your NixOS configuration.</p></li></ul><ol start=2><li>Selective Persistence:</li></ol><ul><li><p>Critical state (e.g., user files, logs, system configuration) is preserved in
+designated persistent subvolumes (e.g., <code>/persist</code>, <code>/var/log</code>, <code>/var/lib</code>) or
+files.</p></li><li><p>You control exactly what state persists by configuring
+<code>environment.persistence."/persist"</code> or other mechanisms.</p></li></ul><ol start=3><li>Reproducibility and Security:</li></ol><ul><li><p>By wiping transient state, impermanence prevents unintended changes from
+accumulating, making the system more reproducible.</p></li><li><p>It enhances security by ensuring sensitive temporary data (e.g., <code>/tmp</code>,
+runtime credentials) is erased on reboot.</p></li></ul><h3 id=getting-started>Getting Started</h3><ol><li>Add impermanence to your <code>flake.nix</code>. You will change the <code>hostname</code> in the
+flake to match your <code>networking.hostName</code>.</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;NixOS configuration&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  inputs <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    nixpkgs<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style=display:flex><span>    disko<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nix-community/disko/latest&#34;</span>;
+</span></span><span style=display:flex><span>    disko<span style=color:#f92672>.</span>inputs<span style=color:#f92672>.</span>nixpkgs<span style=color:#f92672>.</span>follows <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;nixpkgs&#34;</span>;
+</span></span><span style=display:flex><span>    impermanence<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nix-community/impermanence&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  outputs <span style=color:#f92672>=</span> inputs<span style=color:#f92672>@</span>{ nixpkgs<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: {
+</span></span><span style=display:flex><span>    nixosConfigurations <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      hostname <span style=color:#f92672>=</span> nixpkgs<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>nixosSystem {
+</span></span><span style=display:flex><span>        system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>;
+</span></span><span style=display:flex><span>        modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>          <span style=color:#e6db74>./configuration.nix</span>
+</span></span><span style=display:flex><span>          inputs<span style=color:#f92672>.</span>disko<span style=color:#f92672>.</span>nixosModules<span style=color:#f92672>.</span>disko
+</span></span><span style=display:flex><span>          inputs<span style=color:#f92672>.</span>impermanence<span style=color:#f92672>.</span>nixosModules<span style=color:#f92672>.</span>impermanence
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ol start=2><li>Discover where your root subvolume is located with <code>findmnt</code>:</li></ol><p>Before configuring impermanence, it&rsquo;s crucial to know the device path and
+subvolume path of your main BTRFS partition where the root filesystem (<code>/</code>) is
+located. This information is needed for the mount command within the
+impermanence script.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>findmnt /
+</span></span><span style=display:flex><span>TARGET   SOURCE         FSTYPE OPTIONS
+</span></span><span style=display:flex><span>/        /dev/disk/by-partlabel/disk-main-root<span style=color:#f92672>[</span>/root<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>                        btrfs  rw,noatime,compress<span style=color:#f92672>=</span>zstd:3,ssd,discard<span style=color:#f92672>=</span>async,space_cache<span style=color:#f92672>=</span>v2,subvolid<span style=color:#f92672>=</span>275,sub
+</span></span></code></pre></div><p>From the SOURCE column, note the full path, including the device (e.g.,
+<code>/dev/disk/by-partlabel/disk-main-root</code>) and the subvolume in brackets (e.g.,
+<code>[/root]</code>). You will use the device path in the next step</p><p><code>/dev/disk/by-partlabel/disk-main-root</code> is a symlink to the actual device path
+(e.g. <code>/dev/nvme0n1p2</code>), but using the partlabel is generally more robust for
+scripts.</p><ol start=3><li>Create an <code>impermanence.nix</code>:</li></ol><p>Now, create a new file named <code>impermanence.nix</code> in your configuration directory
+(i.e. your flake directory). This file will contain all the specific settings
+for your impermanent setup, including BTRFS subvolume management and persistent
+data locations</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span>}: {
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Reset root subvolume on boot</span>
+</span></span><span style=display:flex><span>  boot<span style=color:#f92672>.</span>initrd<span style=color:#f92672>.</span>postResumeCommands <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkAfter <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    mkdir /btrfs_tmp
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp # CONFIRM THIS IS CORRECT FROM findmnt
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    if [[ -e /btrfs_tmp/root ]]; then
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      mkdir -p /btrfs_tmp/old_roots
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      timestamp=$(date --date=&#34;@$(stat -c %Y /btrfs_tmp/root)&#34; &#34;+%Y-%m-%-d_%H:%M:%S&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      mv /btrfs_tmp/root &#34;/btrfs_tmp/old_roots/$timestamp&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    fi
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    delete_subvolume_recursively() {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      IFS=$&#39;\n&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      for i in $(btrfs subvolume list -o &#34;$1&#34; | cut -f 9- -d &#39; &#39;); do
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        delete_subvolume_recursively &#34;/btrfs_tmp/$i&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      done
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      btrfs subvolume delete &#34;$1&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    for i in $(find /btrfs_tmp/old_roots/ -maxdepth 1 -mtime +30); do
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      delete_subvolume_recursively &#34;$i&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    done
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    btrfs subvolume create /btrfs_tmp/root
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    umount /btrfs_tmp
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Use /persist as the persistence root, matching Disko&#39;s mountpoint</span>
+</span></span><span style=display:flex><span>  environment<span style=color:#f92672>.</span>persistence<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/persist&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    hideMounts <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>    directories <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/etc&#34;</span> <span style=color:#75715e># System configuration (Keep this here for persistence via bind-mount)</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/var/spool&#34;</span> <span style=color:#75715e># Mail queues, cron jobs</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/srv&#34;</span> <span style=color:#75715e># Web server data, etc.</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/root&#34;</span> <span style=color:#75715e># Root user&#39;s home</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e># &#34;/var/log&#34; # Persist logs are handled by disko</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>    files <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#&#34;/persist/swapfile&#34; # Persist swapfile (impermanence manages this file)</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Swapfile configuration (definition for Systemd)</span>
+</span></span><span style=display:flex><span>  swapDevices <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>      device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/persist/swapfile&#34;</span>; <span style=color:#75715e># Points to the persistent location of the swapfile</span>
+</span></span><span style=display:flex><span>      size <span style=color:#f92672>=</span> <span style=color:#ae81ff>8192</span>; <span style=color:#75715e># 8 GB in MiB</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># --- SWAPFILE INITIALIZATION &amp; FORMATTING (CRITICAL for activation) ---</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># 1. Ensure the swapfile exists at the specified size with correct permissions early via tmpfiles.</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>#    The ${toString (8 * 1024 * 1024 * 1024)} converts 8GB to bytes.</span>
+</span></span><span style=display:flex><span>  systemd<span style=color:#f92672>.</span>tmpfiles<span style=color:#f92672>.</span>rules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;f /persist/swapfile 0600 - - </span><span style=color:#e6db74>${</span>toString (<span style=color:#ae81ff>8</span> <span style=color:#f92672>*</span> <span style=color:#ae81ff>1024</span> <span style=color:#f92672>*</span> <span style=color:#ae81ff>1024</span> <span style=color:#f92672>*</span> <span style=color:#ae81ff>1024</span>)<span style=color:#e6db74>}</span><span style=color:#e6db74> -&#34;</span>
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># 2. Format the swapfile *only if it&#39;s not already formatted* during boot.</span>
+</span></span><span style=display:flex><span>  boot<span style=color:#f92672>.</span>initrd<span style=color:#f92672>.</span>postDeviceCommands <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkAfter <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    if ! blkid -p /persist/swapfile | grep -q &#39;TYPE=&#34;swap&#34;&#39;; then
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      echo &#34;NixOS: Formatting /persist/swapfile...&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      mkswap /persist/swapfile
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    fi
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#75715e># --- END SWAPFILE INITIALIZATION &amp; FORMATTING ---</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=applying-your-impermanence-configuration>Applying Your Impermanence Configuration</h3><p>Once you have completed all the steps and created or modified the necessary
+files (<code>flake.nix</code>, <code>impermanence.nix</code>), you need to apply these changes to your
+NixOS system.</p><ol><li>Navigate to your NixOS configuration directory (where your <code>flake.nix</code> is
+located).</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cd /path/to/your/flake
+</span></span></code></pre></div><ol start=2><li>Rebuild and Switch: Execute the <code>nixos-rebuild switch</code> command. This command
+will:</li></ol><ul><li><p>Evaluate your <code>flake.nix</code> and the modules it imports (including your new
+<code>impermanence.nix</code>).</p></li><li><p>Build a new NixOS system closure based on your updated configuration.</p></li><li><p>Activate the new system configuration, making it the current running system.</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo nixos-rebuild switch --flake .#hostname <span style=color:#75715e># Replace &#39;hostname&#39; with your actual system hostname</span>
+</span></span></code></pre></div><ol start=3><li>Perform an Impermanence Test (Before Reboot):</li></ol><ul><li>Before you reboot, create a temporary directory and file in a non-persistent
+location. Since you haven&rsquo;t explicitly added <code>/imperm_test</code> to your
+<code>environment.persistence."/persist"</code> directories, this file should not survive
+a reboot.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mkdir /imperm_test
+</span></span><span style=display:flex><span>echo <span style=color:#e6db74>&#34;This should be Gone after Reboot&#34;</span> | sudo tee /imperm_test/testfile
+</span></span><span style=display:flex><span>ls -l /imperm_test/testfile <span style=color:#75715e># Verify the file exists</span>
+</span></span><span style=display:flex><span>cat /imperm_test/testfile <span style=color:#75715e># Verify content</span>
+</span></span></code></pre></div><ol start=4><li>Reboot Your System: For the impermanence setup to take full effect and for
+your root filesystem to be reset for the first time, you must reboot your
+machine.</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo reboot
+</span></span></code></pre></div><ol start=5><li>Verify Impermanence (After Reboot):</li></ol><ul><li>After the system has rebooted, check if the test directory and file still
+exist:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ls -l /imperm_test/testfile
+</span></span></code></pre></div><p>You should see an output like <code>ls: cannot access '/imperm_test/testfile'</code>: No
+such file or directory. This confirms that the <code>/imperm_test</code> directory and its
+contents were indeed ephemeral and were removed during the reboot process,
+indicating your impermanence setup is working correctly!</p><p>Your system should now come up with a fresh root filesystem, and only the data
+specified in your <code>environment.persistence."/persist"</code> configuration will be
+persistent.</p><h4 id=related-material>Related Material</h4><ul><li><p><a href=https://grahamc.com/blog/erase-your-darlings/>erase your darlings</a></p></li><li><p><a href=https://haseebmajid.dev/posts/2024-07-30-how-i-setup-btrfs-and-luks-on-nixos-using-disko/>Guide for Btrfs with LUKS</a></p></li><li><p><a href=https://notashelf.dev/posts/impermanence>notashelf impermanence</a></p></li><li><p><a href=https://wiki.nixos.org/wiki/Impermanence>NixOS wiki Impermanence</a></p></li><li><p><a href=https://github.com/nix-community/impermanence>nix-community impermanence module</a></p></li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>1187 words</span>
+<span>8 - 11 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#impermanence-the-concept-and-its-btrfs-implementation>Impermanence: The Concept and Its BTRFS Implementation</a><ul><li><a href=#what-does-impermanence-do>What Does Impermanence Do?</a></li><li><a href=#getting-started>Getting Started</a></li><li><a href=#applying-your-impermanence-configuration>Applying Your Impermanence Configuration</a></li></ul></li></ul></nav></aside></div></div></body></html>

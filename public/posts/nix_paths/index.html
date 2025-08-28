@@ -1,0 +1,378 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Nix_paths | NixOS Blog</title><link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://TSawyer87.github.io/posts/nix_paths/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Nix_paths"><meta property="og:description" content='Nix Paths The following examples are done with a local nixpkgs clone located at ~/src/nixpkgs
+Paths in Nix always need a / in them and always expand to absolute paths relative to your current directory.
+nix repl nix-repl> ./. /home/jr/src/nixpkgs nix-repl> ./. + "/lib" /home/jr/src/nixpkgs/lib Nix does path normalization every time you append strings, so if you just add a slash / its not actually there:
+nix-repl> ./. /home/jr/src/nixpkgs nix-repl> ./. + "/" /home/jr/src/nixpkgs nix-repl> ./. + "/" + "lib" /home/jr/src/nixpkgslib nix-repl> "${./.}/lib" # using ${./.} causes a store copy copying &#39;/homr/jr/src/nixpkgs&#39; to the store "/nix/store/3z9fzx8z03wslxvri5syv3jnnhn5fkbd-nixpkgs/lib" nix-repl> "${toString ./.}/lib" # using toString avoids making a store copy "/home/jr/src/nixpkgs/lib" nix-repl> ./lib/.. # nix removes all `..` to avoid redundant path resolutions /home/jr/src/nixpkgs nix-repl> :q realpath ./lib/.. /home/jr/src/nixpkgs ln -s pkgs/applications lib-symlink realpath ./lib-symlink/.. /home/jr/src/nixpkgs/pkgs nix repl nix-repl> ./lib-symlink/.. # Nix doesn&#39;t read this file at all like realpath did /home/jr/src/nixpkgs nix-repl> builtins.readDir ./. # listing of all entries in current dir and their types { ".devcontainer" = "directory"; ".editorconfig" = "regular"; ".git" = "directory"; ".git-blame-ignore-revs" = "regular"; ".gitattributes" = "regular"; ".github" = "directory"; ".gitignore" = "regular"; ".mailmap" = "regular"; ".mergify.yml" = "regular"; ".version" = "symlink"; "CONTRIBUTING.md" = "regular"; COPYING = "regular"; "README.md" = "regular"; ci = "directory"; "default.nix" = "regular"; doc = "directory"; "flake.nix" = "regular"; lib = "directory"; maintainers = "directory"; nixos = "directory"; pkgs = "directory"; "shell.nix" = "regular"; } nix-repl> builtins.readFile ./default.nix "let\n requiredVersion = import ./lib/minver.nix;\nin\n\nif !builtins ? nixVersion || builtins.compareVersions requiredVersion builtins.nixVersion == 1 then\n\n abort &#39;&#39;\n\n This version of Nixpkgs requires Nix >= \${requiredVersion}, please upgrade:\n\n - If you are running NixOS, `nixos-rebuild&#39; can be used to upgrade your system.\n\n - Alternatively, with Nix > 2.0 `nix upgrade-nix&#39; can be used to imperatively\n upgrade Nix. You may use `nix-env --version&#39; to check which version you have.\n\n - If you installed Nix using the install script (https://nixos.org/nix/install),\n it is safe to upgrade by running it again:\n\n curl -L https://nixos.org/nix/install | sh\n\n For more information, please see the NixOS release notes at\n https://nixos.org/nixos/manual or locally at\n \${toString ./nixos/doc/manual/release-notes}.\n\n If you need further help, see https://nixos.org/nixos/support.html\n &#39;&#39;\n\nelse\n\n import ./pkgs/top-level/impure.nix\n" nix-repl> :l <nixpkgs/lib> nix-repl> importJSON ./pkgs/development/python-modules/notebook/missing-hashes.json # Return the nix value for JSON { "@nx/nx-darwin-arm64@npm:16.10.0" = "aabcc8499602b98c9fc3b768fe46dfd4e1b818caa84b740bd4f73a2e4528c719b979ecb1c10a0d793a1fead83073a08bc86417588046aa3e587e80af880bffd3"; "@nx/nx-darwin-x64@npm:16.10.0" = "9dd20f45f646d05306f23f5abb7ade69dcb962e23a013101e93365847722079656d30a19c735fdcfa5c4e0fdf08691f9d621073c58aef2861c26741ff4638375"; "@nx/nx-freebsd-x64@npm:16.10.0" = "35b93aabe3b3274d53157a6fc10fec7e341e75e6818e96cfbc89c3d5b955d225ca80a173630b6aa43c448c6b53b23f06a2699a25c0c8bc71396ee20a023d035f"; "@nx/nx-linux-arm-gnueabihf@npm:16.10.0" = "697b9fa4c70f84d3ea8fe32d47635864f2e40b0ceeb1484126598c61851a2ec34b56bb3eeb9654c37d9b14e81ce85a36ac38946b4b90ca403c57fe448be51ccb"; "@nx/nx-linux-arm64-gnu@npm:16.10.0" = "001e71fedfc763a4dedd6c5901b66a4a790d388673fb74675235e19bb8fe031ff3755568ed867513dd003f873901fabda31a7d5628b39095535cb9f6d1dc7191"; "@nx/nx-linux-arm64-musl@npm:16.10.0" = "58e3b71571bdadd2b0ddd24ea6e30cd795e706ada69f685403412c518fba1a2011ac8c2ac46145eab14649aa5a78e0cedcdb4d327ccb3b6ec12e055171f3840b"; "@nx/nx-linux-x64-gnu@npm:16.10.0" = "97729a7efb27301a67ebf34739784114528ddb54047e63ca110a985eaa0763c5b1ea7c623ead1a2266d07107951be81e82ffa0a30e6e4d97506659303f2c8c78"; "@nx/nx-linux-x64-musl@npm:16.10.0" = "442bdbd5e61324a850e4e7bd6f54204108580299d3c7c4ebcec324da9a63e23f48d797a87593400fc32af78a3a03a3c104bfb360f107fe732e6a6c289863853a"; "@nx/nx-win32-arm64-msvc@npm:16.10.0" = "b5c74184ebfc70294e85f8e309f81c3d40b5cf99068891e613f3bef5ddb946bef7c9942d9e6c7688e22006d45d786342359af3b4fc87aadf369afcda55c73187"; "@nx/nx-win32-x64-msvc@npm:16.10.0" = "c5b174ebd7a5916246088e17d3761804b88f010b6b3f930034fa49af00da33b6d1352728c733024f736e4c2287def75bafdc3d60d8738bd24b67e9a4f11763f8"; } nix-repl> builtins.toJSON # serialize «primop toJSON» nix-repl> builtins.fromTOML «primop fromTOML» nix-repl> builtins.toXML For more serialization formats see nixpkgs/lib/generators.nix as well as in nixpkgs/pkgs/pkgs-lib/formats/ we can see them with the nix repl as follows:'><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-06-15T18:21:05-04:00"><meta property="article:modified_time" content="2025-06-15T18:21:05-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Nix_paths"><meta name=twitter:description content='Nix Paths The following examples are done with a local nixpkgs clone located at ~/src/nixpkgs
+Paths in Nix always need a / in them and always expand to absolute paths relative to your current directory.
+nix repl nix-repl> ./. /home/jr/src/nixpkgs nix-repl> ./. + "/lib" /home/jr/src/nixpkgs/lib Nix does path normalization every time you append strings, so if you just add a slash / its not actually there:
+nix-repl> ./. /home/jr/src/nixpkgs nix-repl> ./. + "/" /home/jr/src/nixpkgs nix-repl> ./. + "/" + "lib" /home/jr/src/nixpkgslib nix-repl> "${./.}/lib" # using ${./.} causes a store copy copying &#39;/homr/jr/src/nixpkgs&#39; to the store "/nix/store/3z9fzx8z03wslxvri5syv3jnnhn5fkbd-nixpkgs/lib" nix-repl> "${toString ./.}/lib" # using toString avoids making a store copy "/home/jr/src/nixpkgs/lib" nix-repl> ./lib/.. # nix removes all `..` to avoid redundant path resolutions /home/jr/src/nixpkgs nix-repl> :q realpath ./lib/.. /home/jr/src/nixpkgs ln -s pkgs/applications lib-symlink realpath ./lib-symlink/.. /home/jr/src/nixpkgs/pkgs nix repl nix-repl> ./lib-symlink/.. # Nix doesn&#39;t read this file at all like realpath did /home/jr/src/nixpkgs nix-repl> builtins.readDir ./. # listing of all entries in current dir and their types { ".devcontainer" = "directory"; ".editorconfig" = "regular"; ".git" = "directory"; ".git-blame-ignore-revs" = "regular"; ".gitattributes" = "regular"; ".github" = "directory"; ".gitignore" = "regular"; ".mailmap" = "regular"; ".mergify.yml" = "regular"; ".version" = "symlink"; "CONTRIBUTING.md" = "regular"; COPYING = "regular"; "README.md" = "regular"; ci = "directory"; "default.nix" = "regular"; doc = "directory"; "flake.nix" = "regular"; lib = "directory"; maintainers = "directory"; nixos = "directory"; pkgs = "directory"; "shell.nix" = "regular"; } nix-repl> builtins.readFile ./default.nix "let\n requiredVersion = import ./lib/minver.nix;\nin\n\nif !builtins ? nixVersion || builtins.compareVersions requiredVersion builtins.nixVersion == 1 then\n\n abort &#39;&#39;\n\n This version of Nixpkgs requires Nix >= \${requiredVersion}, please upgrade:\n\n - If you are running NixOS, `nixos-rebuild&#39; can be used to upgrade your system.\n\n - Alternatively, with Nix > 2.0 `nix upgrade-nix&#39; can be used to imperatively\n upgrade Nix. You may use `nix-env --version&#39; to check which version you have.\n\n - If you installed Nix using the install script (https://nixos.org/nix/install),\n it is safe to upgrade by running it again:\n\n curl -L https://nixos.org/nix/install | sh\n\n For more information, please see the NixOS release notes at\n https://nixos.org/nixos/manual or locally at\n \${toString ./nixos/doc/manual/release-notes}.\n\n If you need further help, see https://nixos.org/nixos/support.html\n &#39;&#39;\n\nelse\n\n import ./pkgs/top-level/impure.nix\n" nix-repl> :l <nixpkgs/lib> nix-repl> importJSON ./pkgs/development/python-modules/notebook/missing-hashes.json # Return the nix value for JSON { "@nx/nx-darwin-arm64@npm:16.10.0" = "aabcc8499602b98c9fc3b768fe46dfd4e1b818caa84b740bd4f73a2e4528c719b979ecb1c10a0d793a1fead83073a08bc86417588046aa3e587e80af880bffd3"; "@nx/nx-darwin-x64@npm:16.10.0" = "9dd20f45f646d05306f23f5abb7ade69dcb962e23a013101e93365847722079656d30a19c735fdcfa5c4e0fdf08691f9d621073c58aef2861c26741ff4638375"; "@nx/nx-freebsd-x64@npm:16.10.0" = "35b93aabe3b3274d53157a6fc10fec7e341e75e6818e96cfbc89c3d5b955d225ca80a173630b6aa43c448c6b53b23f06a2699a25c0c8bc71396ee20a023d035f"; "@nx/nx-linux-arm-gnueabihf@npm:16.10.0" = "697b9fa4c70f84d3ea8fe32d47635864f2e40b0ceeb1484126598c61851a2ec34b56bb3eeb9654c37d9b14e81ce85a36ac38946b4b90ca403c57fe448be51ccb"; "@nx/nx-linux-arm64-gnu@npm:16.10.0" = "001e71fedfc763a4dedd6c5901b66a4a790d388673fb74675235e19bb8fe031ff3755568ed867513dd003f873901fabda31a7d5628b39095535cb9f6d1dc7191"; "@nx/nx-linux-arm64-musl@npm:16.10.0" = "58e3b71571bdadd2b0ddd24ea6e30cd795e706ada69f685403412c518fba1a2011ac8c2ac46145eab14649aa5a78e0cedcdb4d327ccb3b6ec12e055171f3840b"; "@nx/nx-linux-x64-gnu@npm:16.10.0" = "97729a7efb27301a67ebf34739784114528ddb54047e63ca110a985eaa0763c5b1ea7c623ead1a2266d07107951be81e82ffa0a30e6e4d97506659303f2c8c78"; "@nx/nx-linux-x64-musl@npm:16.10.0" = "442bdbd5e61324a850e4e7bd6f54204108580299d3c7c4ebcec324da9a63e23f48d797a87593400fc32af78a3a03a3c104bfb360f107fe732e6a6c289863853a"; "@nx/nx-win32-arm64-msvc@npm:16.10.0" = "b5c74184ebfc70294e85f8e309f81c3d40b5cf99068891e613f3bef5ddb946bef7c9942d9e6c7688e22006d45d786342359af3b4fc87aadf369afcda55c73187"; "@nx/nx-win32-x64-msvc@npm:16.10.0" = "c5b174ebd7a5916246088e17d3761804b88f010b6b3f930034fa49af00da33b6d1352728c733024f736e4c2287def75bafdc3d60d8738bd24b67e9a4f11763f8"; } nix-repl> builtins.toJSON # serialize «primop toJSON» nix-repl> builtins.fromTOML «primop fromTOML» nix-repl> builtins.toXML For more serialization formats see nixpkgs/lib/generators.nix as well as in nixpkgs/pkgs/pkgs-lib/formats/ we can see them with the nix repl as follows:'><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.f27a56e991be000b70f16c1055f85c5c8a52543dd12df8dc254055463a69e878.css integrity="sha256-8npW6ZG+AAtw8WwQVfhcXIpSVD3RLfjcJUBVRjpp6Hg=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://TSawyer87.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/><span itemprop=name>Home</span>
+</a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/posts/><span itemprop=name>Posts</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Nix_paths</h1><time class=dim datetime=2025-06-15T18:21:05-04:00>June 15, 2025</time></div><section class=page-section><h1 id=nix-paths>Nix Paths</h1><p>The following examples are done with a local <code>nixpkgs</code> clone located at
+<code>~/src/nixpkgs</code></p><p>Paths in Nix always need a <code>/</code> in them and always expand to absolute paths
+relative to your current directory.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix repl
+</span></span><span style=display:flex><span>nix-repl&gt; ./.
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs
+</span></span><span style=display:flex><span>nix-repl&gt; ./. + <span style=color:#e6db74>&#34;/lib&#34;</span>
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs/lib
+</span></span></code></pre></div><p>Nix does <em>path normalization</em> every time you append strings, so if you just add
+a slash <code>/</code> its not actually there:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-repl&gt; ./.
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs
+</span></span><span style=display:flex><span>nix-repl&gt; ./. + <span style=color:#e6db74>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs
+</span></span><span style=display:flex><span>nix-repl&gt; ./. + <span style=color:#e6db74>&#34;/&#34;</span> + <span style=color:#e6db74>&#34;lib&#34;</span>
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgslib
+</span></span><span style=display:flex><span>nix-repl&gt; <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>./.<span style=color:#e6db74>}</span><span style=color:#e6db74>/lib&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># using ${./.} causes a store copy</span>
+</span></span><span style=display:flex><span>copying <span style=color:#e6db74>&#39;/homr/jr/src/nixpkgs&#39;</span> to the store
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/nix/store/3z9fzx8z03wslxvri5syv3jnnhn5fkbd-nixpkgs/lib&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>toString ./.<span style=color:#e6db74>}</span><span style=color:#e6db74>/lib&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># using toString avoids making a store copy</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/home/jr/src/nixpkgs/lib&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; ./lib/..             <span style=color:#75715e># nix removes all `..` to avoid redundant path resolutions</span>
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs
+</span></span><span style=display:flex><span>nix-repl&gt; :q
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>realpath ./lib/..
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs
+</span></span><span style=display:flex><span>ln -s pkgs/applications lib-symlink
+</span></span><span style=display:flex><span>realpath ./lib-symlink/..
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs/pkgs
+</span></span><span style=display:flex><span>nix repl
+</span></span><span style=display:flex><span>nix-repl&gt; ./lib-symlink/..   <span style=color:#75715e># Nix doesn&#39;t read this file at all like realpath did</span>
+</span></span><span style=display:flex><span>/home/jr/src/nixpkgs
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.readDir ./. <span style=color:#75715e># listing of all entries in current dir and their types</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.devcontainer&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.editorconfig&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.git&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.git-blame-ignore-revs&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.gitattributes&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.github&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.gitignore&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.mailmap&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.mergify.yml&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;.version&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;symlink&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;CONTRIBUTING.md&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  COPYING <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;README.md&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  ci <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;default.nix&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  doc <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;flake.nix&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  maintainers <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  nixos <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;directory&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;shell.nix&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;regular&#34;</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.readFile ./default.nix
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;let\n  requiredVersion = import ./lib/minver.nix;\nin\n\nif !builtins ? nixVersion
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> || builtins.compareVersions requiredVersion builtins.nixVersion == 1 then\n\n  abort
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> &#39;&#39;\n\n    This version of Nixpkgs requires Nix &gt;= \${requiredVersion}, please
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> upgrade:\n\n    - If you are running NixOS, `nixos-rebuild&#39; can be used to upgrade
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> your system.\n\n    - Alternatively, with Nix &gt; 2.0 `nix upgrade-nix&#39; can be used
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> to imperatively\n      upgrade Nix. You may use `nix-env --version&#39; to check which
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> version you have.\n\n    - If you installed Nix using the install script (https://nixos.org/nix/install),\n
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  it is safe to upgrade by running it again:\n\n          curl -L https://nixos.org/nix/install | sh\n\n
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>For more information, please see the NixOS release notes at\n    https://nixos.org/nixos/manual
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> or locally at\n    \${toString ./nixos/doc/manual/release-notes}.\n\n    If you need further help,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74> see https://nixos.org/nixos/support.html\n  &#39;&#39;\n\nelse\n\n  import ./pkgs/top-level/impure.nix\n&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :l &lt;nixpkgs/lib&gt;
+</span></span><span style=display:flex><span>nix-repl&gt; importJSON ./pkgs/development/python-modules/notebook/missing-hashes.json <span style=color:#75715e># Return the nix value for JSON</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-darwin-arm64@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;aabcc8499602b98c9fc3b768fe46dfd4e1b818caa84b740bd4f73a2e4528c719b979ecb1c10a0d793a1fead83073a08bc86417588046aa3e587e80af880bffd3&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-darwin-x64@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;9dd20f45f646d05306f23f5abb7ade69dcb962e23a013101e93365847722079656d30a19c735fdcfa5c4e0fdf08691f9d621073c58aef2861c26741ff4638375&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-freebsd-x64@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;35b93aabe3b3274d53157a6fc10fec7e341e75e6818e96cfbc89c3d5b955d225ca80a173630b6aa43c448c6b53b23f06a2699a25c0c8bc71396ee20a023d035f&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-linux-arm-gnueabihf@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;697b9fa4c70f84d3ea8fe32d47635864f2e40b0ceeb1484126598c61851a2ec34b56bb3eeb9654c37d9b14e81ce85a36ac38946b4b90ca403c57fe448be51ccb&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-linux-arm64-gnu@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;001e71fedfc763a4dedd6c5901b66a4a790d388673fb74675235e19bb8fe031ff3755568ed867513dd003f873901fabda31a7d5628b39095535cb9f6d1dc7191&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-linux-arm64-musl@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;58e3b71571bdadd2b0ddd24ea6e30cd795e706ada69f685403412c518fba1a2011ac8c2ac46145eab14649aa5a78e0cedcdb4d327ccb3b6ec12e055171f3840b&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-linux-x64-gnu@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;97729a7efb27301a67ebf34739784114528ddb54047e63ca110a985eaa0763c5b1ea7c623ead1a2266d07107951be81e82ffa0a30e6e4d97506659303f2c8c78&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-linux-x64-musl@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;442bdbd5e61324a850e4e7bd6f54204108580299d3c7c4ebcec324da9a63e23f48d797a87593400fc32af78a3a03a3c104bfb360f107fe732e6a6c289863853a&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-win32-arm64-msvc@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;b5c74184ebfc70294e85f8e309f81c3d40b5cf99068891e613f3bef5ddb946bef7c9942d9e6c7688e22006d45d786342359af3b4fc87aadf369afcda55c73187&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;@nx/nx-win32-x64-msvc@npm:16.10.0&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;c5b174ebd7a5916246088e17d3761804b88f010b6b3f930034fa49af00da33b6d1352728c733024f736e4c2287def75bafdc3d60d8738bd24b67e9a4f11763f8&#34;</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.toJSON  <span style=color:#75715e># serialize</span>
+</span></span><span style=display:flex><span>«primop toJSON»
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.fromTOML
+</span></span><span style=display:flex><span>«primop fromTOML»
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.toXML
+</span></span></code></pre></div><p>For more serialization formats see <code>nixpkgs/lib/generators.nix</code> as well as in
+<code>nixpkgs/pkgs/pkgs-lib/formats/</code> we can see them with the <code>nix repl</code> as follows:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cd ~/src/nixpkgs
+</span></span><span style=display:flex><span>nix repl
+</span></span><span style=display:flex><span>nix-repl&gt; :l .
+</span></span><span style=display:flex><span>nix-repl&gt; lib.generators.toYAML <span style=color:#f92672>{}</span> <span style=color:#f92672>{</span> a <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;{\&#34;a\&#34;:10}&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; lib.generators.toYAML <span style=color:#f92672>{}</span> <span style=color:#f92672>{</span> a.b.c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;{\&#34;a\&#34;:{\&#34;b\&#34;:{\&#34;c\&#34;:10}}}&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.trace <span style=color:#f92672>(</span>lib.generators.toYAML <span style=color:#f92672>{}</span> <span style=color:#f92672>{</span> a.b.c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>})</span> null
+</span></span><span style=display:flex><span>trace: <span style=color:#f92672>{</span><span style=color:#e6db74>&#34;a&#34;</span>:<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;b&#34;</span>:<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;c&#34;</span>:10<span style=color:#f92672>}}}</span>
+</span></span><span style=display:flex><span>null
+</span></span><span style=display:flex><span>nix-repl&gt; yamlFormat <span style=color:#f92672>=</span> pkgs.formats.yaml <span style=color:#f92672>{}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>nix-repl&gt; yamlFormat
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  generate <span style=color:#f92672>=</span> «lambda generate @ /home/jr/src/nixpkgs/pkgs/pkgs-lib/formats.nix:111:9»;
+</span></span><span style=display:flex><span>  type <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><ul><li>We can see that it provides a <code>generate</code> function that we can use. <code>generate</code>
+doesn&rsquo;t just generate a string anymore because if we want to lift the
+restriction at evaluation time we can&rsquo;t return the formatted form at
+evaluation time anymore. We need a name to return a derivation continued
+below:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>yamlFormat.generate <span style=color:#e6db74>&#34;name&#34;</span> <span style=color:#f92672>{</span> a.b.c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>«derivation /nix/store/xakajb2rzbmqqkjbh08bxwqdf0xqvjly-name.drv»
+</span></span><span style=display:flex><span>nix-repl&gt; :b yamlFormat.generate <span style=color:#e6db74>&#34;name&#34;</span> <span style=color:#f92672>{</span> a.b.c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>This derivation produced the following outputs:
+</span></span><span style=display:flex><span>out -&gt; /nix/store/y4c5029k6w3l0qmdw7cq396zrdy5x8yj-name
+</span></span><span style=display:flex><span>nix-repl&gt; :q
+</span></span></code></pre></div><p>Let&rsquo;s cat the result to see if it&rsquo;s formatted correctly as YAML:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cat /nix/store/y4c5029k6w3l0qmdw7cq396zrdy5x8yj-name
+</span></span><span style=display:flex><span>───────┬───────────────────────────────────────────────────────────────
+</span></span><span style=display:flex><span>       │ File: /nix/store/y4c5029k6w3l0qmdw7cq396zrdy5x8yj-name
+</span></span><span style=display:flex><span>───────┼──────────────────────────────────────────────────────────────
+</span></span><span style=display:flex><span>   <span style=color:#ae81ff>1</span>   │ a:
+</span></span><span style=display:flex><span>   <span style=color:#ae81ff>2</span>   │   b:
+</span></span><span style=display:flex><span>   <span style=color:#ae81ff>3</span>   │     c: <span style=color:#ae81ff>10</span>
+</span></span><span style=display:flex><span>───────┴───────────────────────────────────────────────────────────
+</span></span></code></pre></div><p>Looks good. There is also a <code>type</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix repl
+</span></span><span style=display:flex><span>nix-repl&gt; :l .
+</span></span><span style=display:flex><span>nix-repl&gt; yamlFormat <span style=color:#f92672>=</span> pkgs.format.yaml <span style=color:#f92672>{}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; yamlFormat.type
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  _type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;option-type&#34;</span>;
+</span></span><span style=display:flex><span>  check <span style=color:#f92672>=</span> «lambda check @ /home/jr/src/nixpkgs/lib/types.nix:1029:19»;
+</span></span><span style=display:flex><span>  deprecationMessage <span style=color:#f92672>=</span> null;
+</span></span><span style=display:flex><span>  description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;YAML value&#34;</span>;
+</span></span><span style=display:flex><span>  descriptionClass <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;conjunction&#34;</span>;
+</span></span><span style=display:flex><span>  emptyValue <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span>  functor <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span>  getSubModules <span style=color:#f92672>=</span> null;
+</span></span><span style=display:flex><span>  getSubOptions <span style=color:#f92672>=</span> «lambda @ /home/jr/src/nixpkgs/lib/types.nix:214:25»;
+</span></span><span style=display:flex><span>  merge <span style=color:#f92672>=</span> «lambda merge @ /home/jr/src/nixpkgs/lib/types.nix:1031:13»;
+</span></span><span style=display:flex><span>  name <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;nullOr&#34;</span>;
+</span></span><span style=display:flex><span>  nestedTypes <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span>  substSubModules <span style=color:#f92672>=</span> «lambda substSubModules @ /home/jr/src/nixpkgs/lib/types.nix:1046:29»;
+</span></span><span style=display:flex><span>  typeMerge <span style=color:#f92672>=</span> «lambda defaultTypeMerge @ /home/jr/src/nixpkgs/lib/types.nix:115:10»;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; lib.modules.mergeDefinitions <span style=color:#f92672>[]</span> yamlFormat.type <span style=color:#f92672>[</span> <span style=color:#f92672>{</span> value <span style=color:#f92672>=</span> null; <span style=color:#f92672>}</span> <span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  defsFinal <span style=color:#f92672>=</span> <span style=color:#f92672>[</span> ... <span style=color:#f92672>]</span>;
+</span></span><span style=display:flex><span>  defsFinal<span style=color:#960050;background-color:#1e0010>&#39;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span>  isDefined <span style=color:#f92672>=</span> true;
+</span></span><span style=display:flex><span>  mergedValue <span style=color:#f92672>=</span> null;
+</span></span><span style=display:flex><span>  optionalValue <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; <span style=color:#f92672>(</span>lib.modules.mergeDefinitions <span style=color:#f92672>[]</span> yamlFormat.type <span style=color:#f92672>[</span> <span style=color:#f92672>{</span> value <span style=color:#f92672>=</span> null; <span style=color:#f92672>}</span> <span style=color:#f92672>])</span>.mergedValue
+</span></span><span style=display:flex><span>null
+</span></span><span style=display:flex><span>nix-repl&gt; :p <span style=color:#f92672>(</span>lib.modules.mergeDefinitions <span style=color:#f92672>[]</span> yamlFormat.type <span style=color:#f92672>[</span> <span style=color:#f92672>{</span> value <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> a.b.c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>; <span style=color:#f92672>}</span> <span style=color:#f92672>])</span>.mergedValue
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  a <span style=color:#f92672>=</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    b <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :p <span style=color:#f92672>(</span>lib.modules.mergeDefinitions <span style=color:#f92672>[]</span> yamlFormat.type <span style=color:#f92672>[</span> <span style=color:#f92672>{</span> value <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> a.b.c <span style=color:#f92672>=</span> 10; <span style=color:#f92672>}</span>; <span style=color:#f92672>}</span> <span style=color:#f92672>{</span> value <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> a.b.d <span style=color:#f92672>=</span> 20; <span style=color:#f92672>}</span>; <span style=color:#f92672>}</span> <span style=color:#f92672>])</span>.mergedValue
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  a <span style=color:#f92672>=</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    b <span style=color:#f92672>=</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>      c <span style=color:#f92672>=</span> 10;
+</span></span><span style=display:flex><span>      d <span style=color:#f92672>=</span> 20;
+</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><ul><li><code>lib</code> can&rsquo;t access any packages, it is entirely at evaluation time. It can&rsquo;t
+access any formatters or things like that. If we lift that restriction as is
+done in <code>pkgs.formats</code> we can make it look much nicer.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cd ~/src/nixpkgs
+</span></span><span style=display:flex><span>nix-build -A hello
+</span></span><span style=display:flex><span>warning: Nix search path entry <span style=color:#e6db74>&#39;/nix/var/nix/profiles/per-user/root/channels&#39;</span> does not exist, ignoring
+</span></span><span style=display:flex><span>this path will be fetched <span style=color:#f92672>(</span>0.06 MiB download, 0.26 MiB unpacked<span style=color:#f92672>)</span>:
+</span></span><span style=display:flex><span>  /nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2
+</span></span><span style=display:flex><span>copying path <span style=color:#e6db74>&#39;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#39;</span> from <span style=color:#e6db74>&#39;https://cache.nixos.org&#39;</span>...
+</span></span><span style=display:flex><span>/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2
+</span></span></code></pre></div><p>Say we rely on this store path in a derivation:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-repl&gt; thePath <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; thePath + <span style=color:#e6db74>&#34;/bin/hello&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello&#34;</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>hx ~/src/nixpkgs/test2.nix
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># test2.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>with</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./.</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>runCommand <span style=color:#e6db74>&#34;test&#34;</span> {
+</span></span><span style=display:flex><span>    nativeBuildInputs <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>        hello
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>}<span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  hello &gt; $out
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>&#39;&#39;</span>
+</span></span></code></pre></div><p>Try building it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build test2.nix <span style=color:#f92672>&amp;&amp;</span> cat result
+</span></span><span style=display:flex><span>warning: Nix search path entry <span style=color:#e6db74>&#39;/nix/var/nix/profiles/per-user/root/channels&#39;</span> does not exist, ignoring
+</span></span><span style=display:flex><span>/nix/store/m55p4vpb8s7s28s20vs89i467kxbrdac-test
+</span></span><span style=display:flex><span>Hello, world!
+</span></span></code></pre></div><p>Now if we try it with the store path:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># test2.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>with</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./.</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>runCommand <span style=color:#e6db74>&#34;test&#34;</span> {
+</span></span><span style=display:flex><span>}<span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  /nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello &gt; $out
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>&#39;&#39;</span>
+</span></span></code></pre></div><p>This doesn&rsquo;t work</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build test2.nix
+</span></span><span style=display:flex><span>last <span style=color:#ae81ff>1</span> log lines:
+</span></span><span style=display:flex><span>&gt; /build/.attr-0l2nkwhif96f51f4amnlf414lhl4rv9vh8iffyp431v6s28gsr90: line 1: /nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello: No such file or directory
+</span></span><span style=display:flex><span>For full logs, run:
+</span></span><span style=display:flex><span>nix log /nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv
+</span></span><span style=display:flex><span>nix-instantiate test2.nix
+</span></span><span style=display:flex><span>/nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv
+</span></span><span style=display:flex><span>nix derivation show /nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv | jq
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;args&#34;</span>: <span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;-e&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/nix/store/vj1c3wf9c11a0qs6p3ymfvrnsdgsdcbq-source-stdenv.sh&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/nix/store/shkw4qm9qcw5sc5n1k5jznc83ny02r39-default-builder.sh&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>]</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;builder&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/bash&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;env&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;__structuredAttrs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;buildCommand&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello &gt; </span>$out<span style=color:#e6db74>\n&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;buildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;builder&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/bash&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;cmakeFlags&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;configureFlags&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsBuildBuild&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsBuildBuildPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsBuildTarget&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsBuildTargetPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsHostHost&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsHostHostPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsTargetTarget&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;depsTargetTargetPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;doCheck&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;doInstallCheck&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;enableParallelBuilding&#34;</span>: <span style=color:#e6db74>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;enableParallelChecking&#34;</span>: <span style=color:#e6db74>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;enableParallelInstalling&#34;</span>: <span style=color:#e6db74>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;mesonFlags&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;test&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;nativeBuildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;out&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/ljrkx5midby3j7p4g96d74jrq8f9rpya-test&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;outputs&#34;</span>: <span style=color:#e6db74>&#34;out&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;passAsFile&#34;</span>: <span style=color:#e6db74>&#34;buildCommand&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;patches&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;propagatedBuildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;propagatedNativeBuildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;stdenv&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/aq801xbgs98nxx3lckrym06qfvl8mfsf-stdenv-linux&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;strictDeps&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;system&#34;</span>: <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;inputDrvs&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/nix/store/bmncp7arkdhrl6nkyg0g420935x792gl-stdenv-linux.drv&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;dynamicOutputs&#34;</span>: <span style=color:#f92672>{}</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;outputs&#34;</span>: <span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>          <span style=color:#e6db74>&#34;out&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/nix/store/rfkzz952hz2d58d90mscxvk87v5wa5bz-bash-5.2p37.drv&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;dynamicOutputs&#34;</span>: <span style=color:#f92672>{}</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;outputs&#34;</span>: <span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>          <span style=color:#e6db74>&#34;out&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;inputSrcs&#34;</span>: <span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/nix/store/shkw4qm9qcw5sc5n1k5jznc83ny02r39-default-builder.sh&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;/nix/store/vj1c3wf9c11a0qs6p3ymfvrnsdgsdcbq-source-stdenv.sh&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>]</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;test&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;outputs&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;out&#34;</span>: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;path&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/ljrkx5midby3j7p4g96d74jrq8f9rpya-test&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;system&#34;</span>: <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>You see the <code>"inputDrvs"</code>, they are the derivations that we depend on and it
+doesn&rsquo;t know about the <code>hello.drv</code>. In Nix for the builder sandbox it creates a
+sandbox that only contains the derivations that you depend on which ensures that
+you can&rsquo;t depend on any derivation that you haven&rsquo;t explicitly decalred.</p><p>Nix does have <code>builtins.storePath</code> that allows you to do this, otherwise it&rsquo;s
+kind of an anti pattern.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># test2.nix</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># test2.nix</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># test2.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>with</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./.</span> {};
+</span></span><span style=display:flex><span>  runCommand <span style=color:#e6db74>&#34;test&#34;</span> {
+</span></span><span style=display:flex><span>  } <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    </span><span style=color:#e6db74>${</span>builtins<span style=color:#f92672>.</span>storePath <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span><span style=color:#e6db74>}</span><span style=color:#e6db74>/bin/hello &gt; $out
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>
+</span></span></code></pre></div><p><code>builtins.storePath</code>: Turns a store path into the thing that it represents in
+the store.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build test2.nix <span style=color:#f92672>&amp;&amp;</span> cat result
+</span></span><span style=display:flex><span>/nix/store/x48741w0k9hgqywzv6wc7rk90r1y75js-test
+</span></span><span style=display:flex><span>Hello, world!
+</span></span></code></pre></div><p>To demonstrate what <code>builtins.storePath</code> does:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-repl&gt; builtins.storePath <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.getContext <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span> <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.getContext <span style=color:#f92672>(</span>builtins.storePath <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span><span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :p builtins.getContext <span style=color:#f92672>(</span>builtins.storePath <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span><span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> path <span style=color:#f92672>=</span> true; <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-repl&gt; :l .
+</span></span><span style=display:flex><span>warning: Nix search path entry <span style=color:#e6db74>&#39;/nix/var/nix/profiles/per-user/root/channels&#39;</span> does not exist, ignoring
+</span></span><span style=display:flex><span>Added <span style=color:#ae81ff>24878</span> variables.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>nix-repl&gt; hello.outPath
+</span></span><span style=display:flex><span><span style=color:#75715e># this is the output path of the hello derivation</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :p builtins.getContext hello.outPath
+</span></span><span style=display:flex><span><span style=color:#75715e># we see that this is a `.drv`, this is because derivations can have multiple outputs</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/ljxsxdy1syy03b9kfnnh8x7zsk21fdcq-hello-2.12.2.drv&#34;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    outputs <span style=color:#f92672>=</span> <span style=color:#f92672>[</span> <span style=color:#e6db74>&#34;out&#34;</span> <span style=color:#f92672>]</span>;
+</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># for example</span>
+</span></span><span style=display:flex><span>nix-repl&gt; openssl.outputs
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;bin&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;dev&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;out&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;man&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;doc&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;debug&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>nix-repl&gt; openssl.all
+</span></span><span style=display:flex><span><span style=color:#75715e># a list of all the derivations</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+</span></span><span style=display:flex><span>  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+</span></span><span style=display:flex><span>  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+</span></span><span style=display:flex><span>  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+</span></span><span style=display:flex><span>  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+</span></span><span style=display:flex><span>  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+</span></span><span style=display:flex><span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>nix-repl&gt; lib.concatStringsSep <span style=color:#e6db74>&#34; &#34;</span> openssl.all
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;/nix/store/rjzx8v679rwd6dsb6s08iy3j2rrax72s-openssl-3.4.1-bin /nix/store/kcgqglb4iax0zh5jlrxmjdik93wlgsrq-openssl-3.4.1-dev /nix/store/8pviily4fgsl02ijm65binz236717wfs-openssl-3.4.1 /nix/store/1l5b31cnswnbcdcac9rzs9xixnc2n9r5-openssl-3.4.1-man /nix/store/9fz5qmj0z70cbzy7mapml0sbi8z6ap0a-openssl-3.4.1-doc /nix/store/yk2g2gfcj2fy1ffyi1g91q7jmp4h8pxa-openssl-3.4.1-debug&#34;</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :p builtins.getContext <span style=color:#f92672>(</span>builtins.unsafeDiscardOutputDependency <span style=color:#f92672>(</span>lib.concatStringsSep <span style=color:#e6db74>&#34; &#34;</span> openssl.all<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv&#34;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    outputs <span style=color:#f92672>=</span> <span style=color:#f92672>[</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;bin&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;debug&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;dev&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;doc&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;man&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;out&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>]</span>;
+</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :p builtins.getContext openssl.drvPath
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv&#34;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> allOutputs <span style=color:#f92672>=</span> true; <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># useful if you need to create a derivation that copies this derivation to another machine</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># remote builders usually take care of this but you may need it occasionally</span>
+</span></span><span style=display:flex><span>nix-repl&gt; :p builtins.getContext <span style=color:#f92672>(</span>builtins.unsafeDiscardOutputDependency openssl.drvPath<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv&#34;</span> <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> path <span style=color:#f92672>=</span> true; <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>Relying on paths outside of the nix store is generally not recommended because
+of garbage collection and it&rsquo;s considered unsafe.</p></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>1462 words</span>
+<span>15 - 19 minutes read</span></div></aside></div></div></body></html>
